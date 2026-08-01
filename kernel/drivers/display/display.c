@@ -209,7 +209,12 @@ int display_set_mode(unsigned new_width,unsigned new_height){
     width=new_width/CELL_WIDTH;height=new_height/CELL_HEIGHT;
     if(width>MAX_WIDTH)width=MAX_WIDTH;
     if(height>MAX_HEIGHT)height=MAX_HEIGHT;
-    row=col=cursor_x=cursor_y=0;cursor_drawn=0;display_clear();return 1;
+    row=col=cursor_x=cursor_y=0;cursor_drawn=0;
+    for(unsigned y=0;y<fb_height;y++){
+        volatile uint32_t*line=(volatile uint32_t*)(framebuffer+y*fb_pitch);
+        for(unsigned x=0;x<fb_width;x++)line[x]=palette[(color>>4)&15];
+    }
+    display_clear();return 1;
 }
 void display_puts(const char *s){while(*s)display_putc(*s++);}
 void display_clear(void){for(size_t y=0;y<height;y++)for(size_t x=0;x<width;x++)render_cell(x,y,' ',color);row=col=0;cursor_vga();serial_raw("\033[2J\033[H");}

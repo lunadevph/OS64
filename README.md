@@ -24,9 +24,23 @@ freestanding kernel. The kernel provides VGA and serial consoles, PS/2 input,
 ATA/FAT32 storage, a read-only USTAR initramfs, VFS dispatch, an ELF64
 application ABI, users, protected password hashes, and cooperative services.
 
-## Screenshot
+## Screenshots
+
+### Boot and login
 
 ![OS64 1.0 boot summary and shell](docs/screenshots/os64-boot.png)
+
+### Command help
+
+![OS64 grouped command help](docs/screenshots/os64-help.png)
+
+### Memory and background workers
+
+![OS64 free and ps output](docs/screenshots/os64-system-info.png)
+
+### System Manager
+
+![OS64 System Manager TUI](docs/screenshots/os64-sysmgr.png)
 
 ## Source layout
 
