@@ -324,6 +324,10 @@ check-all: check check-rootfs check-fat
 smoke-commands: iso
 	$(Q)python3 scripts/smoke-commands.py
 
+.PHONY: generate-screenshots
+generate-screenshots: iso disk
+	$(Q)python3 scripts/generate-screenshots.py
+
 .PHONY: check-ext
 check-ext: iso
 	$(Q)python3 scripts/check-ext-variants.py
@@ -440,6 +444,7 @@ help:
 	@printf "  check-fat        Check the FAT32 disk filesystem\n"
 	@printf "  check-ext        Create and validate ext2/ext3/ext4 filesystems\n"
 	@printf "  check-all        Run every validation target\n"
+	@printf "  generate-screenshots  Capture README images from QEMU\n"
 	@printf "\n"
 	@printf "Run targets:\n"
 	@printf "  run              Run with serial output only\n"

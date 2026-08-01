@@ -42,6 +42,12 @@ application ABI, users, protected password hashes, and cooperative services.
 
 ![OS64 System Manager TUI](docs/screenshots/os64-sysmgr.png)
 
+Regenerate every image above from a real QEMU session with:
+
+```sh
+make generate-screenshots
+```
+
 ## Source layout
 
 - `boot/` contains GRUB configuration and boot/linker support.
