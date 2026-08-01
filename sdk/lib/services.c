@@ -1,0 +1,21 @@
+#include <os64/fs.h>
+#include <os64/process.h>
+#include <os64/time.h>
+#include <os64/network.h>
+#include <os64/random.h>
+#include <os64/log.h>
+#include <os64/config.h>
+#include <os64/memory.h>
+#include <os64/thread.h>
+#include <os64/security.h>
+#include <os64/libc.h>
+static const os64_api_t*api(void){return os64_libc_api();}
+void*os_allocate(size_t n){const os64_api_t*a=api();return a&&a->allocate?a->allocate(n):0;}void os_release(void*p){(void)p;}unsigned long os_memory_free(void){const os64_api_t*a=api();return a&&a->system_query?a->system_query("memory.free_bytes"):0;}int os_thread_create(os_thread_entry e,void*c){(void)e;(void)c;return -1;}int os_thread_join(int t,int*s){(void)t;(void)s;return -1;}void os_thread_yield(void){}
+int os_file_read(const char*p,unsigned char*d,os64_size_t c,os64_size_t*n){const os64_api_t*a=api();return a&&a->read_file?a->read_file(p,d,c,n):0;}int os_file_write(const char*p,const unsigned char*d,os64_size_t n){const os64_api_t*a=api();return a&&a->write_file?a->write_file(p,d,n):0;}int os_directory_read(const char*p,unsigned i,os_dirent_t*e){const os64_api_t*a=api();return a&&a->read_directory?a->read_directory(p,i,e):0;}
+int os_process_run(const char*c,const char*a){const os64_api_t*x=api();return x&&x->dispatch?x->dispatch(c,a):126;}int os_process_interrupted(void){const os64_api_t*a=api();return a&&a->system_query?(int)a->system_query("process.interrupted"):0;}int os_process_kill(int pid){(void)pid;return -1;}int os_process_spawn(const char*p,const char*a){(void)p;(void)a;return -1;}
+int os_clock_realtime(os64_datetime_t*t){const os64_api_t*a=api();return a&&a->clock_get?a->clock_get(t):0;}unsigned long os_timer_monotonic(void){const os64_api_t*a=api();return a&&a->system_query?a->system_query("time.monotonic_ms"):0;}void os_sleep(unsigned ms){unsigned long end=os_timer_monotonic()+ms;while(os_timer_monotonic()<end&&!os_process_interrupted()){} }
+int os_network_ready(void){const os64_api_t*a=api();return a&&a->system_query?(int)a->system_query("network.ready"):0;}int os_network_resolve(const char*h,unsigned*a){(void)h;(void)a;return -1;}int os_network_tcp_connect(unsigned a,unsigned short p){(void)a;(void)p;return -1;}int os_network_udp_send(unsigned a,unsigned short p,const void*d,unsigned n){(void)a;(void)p;(void)d;(void)n;return -1;}
+int os_random(void*d,size_t n){os64_size_t got=0;return os_file_read("/dev/urandom",d,n,&got)&&got==n;}
+unsigned os_getuid(void){const os64_api_t*a=api();return a&&a->getuid?a->getuid():65534u;}unsigned os_getgid(void){const os64_api_t*a=api();return a&&a->getgid?a->getgid():65534u;}int os_setuid(unsigned u){const os64_api_t*a=api();return a&&a->setuid?a->setuid(u):0;}int os_setgid(unsigned g){const os64_api_t*a=api();return a&&a->setgid?a->setgid(g):0;}int os_check_permission(const char*p,unsigned m){const os64_api_t*a=api();return a&&a->check_permission?a->check_permission(p,m):0;}int os_is_admin(void){const os64_api_t*a=api();return a&&a->is_admin?a->is_admin():0;}int os_is_root(void){const os64_api_t*a=api();return a&&a->is_root?a->is_root():0;}size_t os_get_groups(unsigned*g,size_t c){const os64_api_t*a=api();unsigned bits=a&&a->get_groups?a->get_groups():0,n=0;for(unsigned i=0;i<32;i++)if(bits&(1u<<i)){if(n<c&&g)g[n]=i;n++;}return n;}
+void os_log(enum os_log_level l,const char*m){const os64_api_t*a=api();if(!a||!a->write)return;a->write(l==OS_LOG_ERROR?"[ERROR] ":l==OS_LOG_WARNING?"[WARN] ":l==OS_LOG_DEBUG?"[DEBUG] ":"[INFO] ");a->write(m);a->write("\n");}
+int os_config_parse(const char*t,os_config_callback cb,void*c){if(!t||!cb)return 0;char key[64],value[192];while(*t){while(*t==' '||*t=='\t'||*t=='\r'||*t=='\n')t++;if(*t=='#'){while(*t&&*t!='\n')t++;continue;}unsigned k=0,v=0;while(*t&&*t!='='&&*t!='\n'&&k+1<sizeof key)key[k++]=*t++;key[k]=0;if(*t!='='){while(*t&&*t!='\n')t++;continue;}t++;while(*t&&*t!='\r'&&*t!='\n'&&v+1<sizeof value)value[v++]=*t++;while(v&&(value[v-1]==' '||value[v-1]=='\t'))v--;value[v]=0;if(!cb(key,value,c))return 0;}return 1;}int os_config_read(const char*p,os_config_callback cb,void*c){unsigned char data[2048];os64_size_t n;if(!os_file_read(p,data,sizeof data-1,&n))return 0;data[n]=0;return os_config_parse((char*)data,cb,c);}

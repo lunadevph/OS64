@@ -1,0 +1,17 @@
+bits 16
+org 0x7c00
+
+times 446 db 0
+
+; /dev/sda1: FAT32 LBA, sectors 2048 through 131071.
+db 0x80, 0, 2, 0, 0x0c, 0xff, 0xff, 0xff
+dd 2048
+dd 129024
+
+; /dev/sda2: OS64 native varfs.
+db 0x00, 0xff, 0xff, 0xff, 0x7f, 0xff, 0xff, 0xff
+dd 131072
+dd 131072
+
+times 16 * 2 db 0
+dw 0xaa55

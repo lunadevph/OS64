@@ -1,0 +1,5 @@
+# OS64 system-wide shell profile
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+HOME=/root
+SHELL=/bin/sh
+

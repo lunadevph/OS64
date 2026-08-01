@@ -1,0 +1,11 @@
+root:x:0:root
+admin:x:10:root
+users:x:100:
+developers:x:101:
+operators:x:102:
+network:x:103:
+audio:x:104:
+video:x:105:
+storage:x:106:root
+wheel:x:107:root
+nobody:x:65534:

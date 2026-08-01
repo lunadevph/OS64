@@ -1,0 +1,11 @@
+(bold)Welcome to OS64 1.0 (x86_64)(reset)
+
+ * Documentation:  type "help"
+ * System status:  status
+ * System details: uname -a
+ * System log:     dmesg
+
+The programs included with OS64 are free software; the exact distribution
+terms for each program are described in the corresponding source files.
+
+OS64 comes with ABSOLUTELY NO WARRANTY, to the extent permitted by law.

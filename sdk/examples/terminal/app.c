@@ -1,0 +1,3 @@
+#include <os64/terminal.h>
+#include <os64/tui.h>
+int _start(const os64_api_t*api,const char*args){(void)args;if(!os_init(api))return 126;os_terminal_t*term=os_terminal_create();if(!term)return 1;os_terminal_clear(term);os_terminal_set_color(term,OS_COLOR_BRIGHT_WHITE,OS_COLOR_BLUE);os_window_t*window=os_window_create(term,8,3,62,16,"OS64 Terminal SDK");os_label(window,2,3,"Status: Ready");os_label(window,2,5,"Architecture: x86_64");os_progress(window,2,8,40,73);os_statusbar(term,"ESC Exit | Unicode + dirty-region rendering");os_terminal_flush(term);os_terminal_run(term);os_terminal_destroy(term);return 0;}

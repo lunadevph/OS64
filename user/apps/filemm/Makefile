@@ -1,0 +1,1 @@
+include ../../libtui/app.mk

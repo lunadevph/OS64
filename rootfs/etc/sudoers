@@ -1,0 +1,5 @@
+# OS64 privilege policy. This file is read-only in the initramfs.
+# Administrators and members of wheel may elevate after authentication.
+%admin ALL=(root) ALL
+%wheel ALL=(root) ALL
+timeout=300

@@ -1,0 +1,6 @@
+#include <os64/tui.h>
+struct os_window{os_terminal_t*terminal;int x,y,width,height;};struct os_widget{struct os_window*window;int x,y,width;};static struct os_window windows[8];static struct os_widget widgets[64];static unsigned window_count,widget_count;
+os_window_t*os_window_create(os_terminal_t*t,int x,int y,int w,int h,const char*title){if(!t||w<4||h<3||window_count>=8)return 0;struct os_window*v=&windows[window_count++];v->terminal=t;v->x=x;v->y=y;v->width=w;v->height=h;os_terminal_panel(t,(unsigned)x,(unsigned)y,(unsigned)w,(unsigned)h,title);return v;}
+os_widget_t*os_label(os_window_t*v,int x,int y,const char*text){if(!v||widget_count>=64)return 0;struct os_widget*w=&widgets[widget_count++];w->window=v;w->x=x;w->y=y;os_terminal_write(v->terminal,(unsigned)(v->x+x),(unsigned)(v->y+y),text);return w;}
+os_widget_t*os_progress(os_window_t*v,int x,int y,int width,unsigned percent){if(!v||widget_count>=64)return 0;struct os_widget*w=&widgets[widget_count++];w->window=v;w->x=x;w->y=y;w->width=width;os_terminal_progress(v->terminal,(unsigned)(v->x+x),(unsigned)(v->y+y),(unsigned)width,percent);return w;}
+void os_statusbar(os_terminal_t*t,const char*text){os_terminal_statusbar(t,text);}

@@ -1,0 +1,7 @@
+# device       mount point  type    options  dump pass
+initramfs      /            initramfs ro    0    0
+procfs         /proc        procfs  ro       0    0
+tmpfs          /tmp         tmpfs   rw       0    0
+/dev/sda1      /home        fat32   rw       0    2
+/dev/sda2      /var         ext4    rw       0    2
+devfs          /dev         devfs   rw       0    0
