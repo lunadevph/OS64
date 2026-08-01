@@ -1,4 +1,22 @@
-# OS64
+<div align="center">
+
+```text
+   ____  _____  __   _  _
+  / __ \/ ___/ / /_ | || |
+ | |  | \__ \ | '_ \| || |_
+ | |__| |___/ /| (_) |__   _|
+  \____/|____/  \___/   |_|
+```
+
+# OS64 1.0
+
+**A lightweight experimental operating system for x86_64**
+
+Kernel · Initramfs · Unix-style userland · Networking · Native SDK
+
+</div>
+
+---
 
 OS64 is an educational 64-bit x86 operating system. GRUB loads a Multiboot2
 bootstrap which verifies x86-64 long-mode support before entering the
