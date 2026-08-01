@@ -24,7 +24,7 @@ freestanding kernel. The kernel provides VGA and serial consoles, PS/2 input,
 ATA/FAT32 storage, a read-only USTAR initramfs, VFS dispatch, an ELF64
 application ABI, users, protected password hashes, and cooperative services.
 
-## Screenshots
+## OS64 Running in QEMU
 
 ### Boot and login
 
