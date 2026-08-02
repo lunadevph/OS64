@@ -12,7 +12,7 @@ static int equal(const char *a,const char *b){while(*a&&*a==*b){a++;b++;}return 
 static void put_number(const os64_api_t *api,unsigned long value){char digits[24];unsigned used=0;if(!value)digits[used++]='0';while(value){digits[used++]=(char)('0'+value%10);value/=10;}while(used)api->putc(digits[--used]);}
 static void label(const os64_api_t *api,const char *name,int color){if(color)api->write("\x1b[96m");api->write(name);if(color)api->write("\x1b[0m");api->write(": ");}
 static void prefix(const os64_api_t *api,unsigned row,int color){if(color)api->write("\x1b[94m");api->write(logo[row]);if(color)api->write("\x1b[0m");api->write("  ");}
-static void memory_line(const os64_api_t *api){unsigned long used=api->system_query("memory.used_bytes")/1024,total=api->system_query("memory.heap_bytes")/1024;put_number(api,used);api->write(" KiB / ");put_number(api,total);api->write(" KiB kernel heap");}
+static void memory_line(const os64_api_t *api){unsigned long free_kib=api->system_query("memory.free_bytes")/1024,total_mib=api->system_query("memory.total_kib")/1024;put_number(api,free_kib);api->write(" KiB kernel heap free / ");put_number(api,total_mib);api->write(" MiB detected");}
 
 int _start(const os64_api_t *api,const char *args){
     if(!api||api->version!=OS64_ABI_VERSION)return 126;

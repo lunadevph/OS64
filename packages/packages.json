@@ -9,7 +9,7 @@
       "license": "GPL-2.0-or-later",
       "upstream": "native",
       "payload": "packages/repository/sysfetch.b64",
-      "sha256": "1509f5bc327ae06f0bb28f186a8bf82763356f7e94b1c52057635ea446c3e486",
+      "sha256": "5915cb743f6452458433c47e01dc7cfa92ac934dbe801fba70c50cca72a1adf1",
       "essential": true,
       "description": "Fastfetch-style OS, hardware, storage, service, and network summary"
     },
