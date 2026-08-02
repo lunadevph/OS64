@@ -153,6 +153,16 @@ searches application directories containing a Makefile and prints the
 discovered projects; the user build installs each output into its canonical
 root filesystem destination without a duplicate binary cache.
 
+For a browser-accessible graphical console, run `make run-gui`. QEMU listens
+on VNC display `:0` (`localhost:5900`). In a second terminal, start noVNC:
+
+```sh
+websockify --web /usr/share/novnc 6080 localhost:5900
+```
+
+Open `http://localhost:6080/vnc.html`. In GitHub Codespaces, forward port 6080
+and open the forwarded address instead.
+
 `pm` is OS64's small Internet package manager. It retrieves its catalog and
 base64-transported x86_64 ELF payloads from the project on
 `raw.githubusercontent.com` using OS64's certificate-validated HTTPS client.
