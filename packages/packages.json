@@ -4,14 +4,14 @@
   "packages": [
     {
       "name": "sysfetch",
-      "version": "1.0",
+      "version": "1.1",
       "category": "system",
       "license": "GPL-2.0-or-later",
       "upstream": "native",
       "payload": "packages/repository/sysfetch.b64",
-      "sha256": "6418a4d8972858eb217be7170f508e8d931c7e5038c9d42da0b4a0cf94e548eb",
+      "sha256": "1509f5bc327ae06f0bb28f186a8bf82763356f7e94b1c52057635ea446c3e486",
       "essential": true,
-      "description": "Compact OS, memory, user, and network summary"
+      "description": "Fastfetch-style OS, hardware, storage, service, and network summary"
     },
     {
       "name": "netcheck",
