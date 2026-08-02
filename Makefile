@@ -384,20 +384,25 @@ run-installed: disk
 .PHONY: run-gui
 run-gui: iso disk
 	@printf "  %-7s %s\n" "QEMU" "VNC display :0 (localhost:5900)"
-	@printf "\n"
-	@printf "  Open a second terminal and run:\n"
-	@printf "    websockify --web /usr/share/novnc 6080 localhost:5900\n"
-	@printf "\n"
+	@command -v websockify >/dev/null 2>&1 || { printf "  %-7s %s\n" "ERROR" "websockify is not installed"; exit 1; }
+	@test -d /usr/share/novnc || { printf "  %-7s %s\n" "ERROR" "/usr/share/novnc is missing"; exit 1; }
+	@printf "  %-7s %s\n" "NOVNC" "http://localhost:6080/vnc.html"
 	@printf "  Then open http://localhost:6080/vnc.html\n"
 	@printf "  In Codespaces, forward port 6080 and open its forwarded URL.\n"
 	@printf "\n"
-	$(Q)$(QEMU) \
-		$(QEMU_COMMON) \
-		-boot order=d \
-		-cdrom $(ISO) \
-		-serial stdio \
-		-display none \
-		-vnc :0
+	$(Q)set -eu; \
+		mkdir -p $(BUILD); \
+		websockify --web /usr/share/novnc 6080 localhost:5900 >$(BUILD)/novnc.log 2>&1 & \
+		novnc_pid=$$!; \
+		cleanup() { kill "$$novnc_pid" 2>/dev/null || true; wait "$$novnc_pid" 2>/dev/null || true; }; \
+		trap cleanup EXIT INT TERM; \
+		$(QEMU) \
+			$(QEMU_COMMON) \
+			-boot order=d \
+			-cdrom $(ISO) \
+			-serial stdio \
+			-display none \
+			-vnc :0
 
 .PHONY: run-pcnet
 run-pcnet: iso disk
@@ -475,7 +480,7 @@ help:
 	@printf "  run              Run with serial output only\n"
 	@printf "  run-console      Run using QEMU's nographic console\n"
 	@printf "  run-installed    Boot from the persistent disk\n"
-	@printf "  run-gui          Run with VNC :0 for noVNC/websockify\n"
+	@printf "  run-gui          Run VNC :0 with an automatic noVNC proxy\n"
 	@printf "  run-pcnet        Run using the AMD PCnet adapter\n"
 	@printf "  debug            Wait for a GDB connection on port 1234\n"
 	@printf "\n"
