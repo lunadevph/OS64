@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "repository": "OS64 installation media",
+  "repository": "https://raw.githubusercontent.com/lunadevph/OS64/main/packages",
   "packages": [
     {
       "name": "sysfetch",
@@ -8,6 +8,7 @@
       "category": "system",
       "license": "GPL-2.0-or-later",
       "upstream": "native",
+      "payload": "packages/repository/sysfetch.b64",
       "essential": true,
       "description": "Compact OS, memory, user, and network summary"
     },
@@ -17,6 +18,7 @@
       "category": "network",
       "license": "GPL-2.0-or-later",
       "upstream": "native",
+      "payload": "packages/repository/netcheck.b64",
       "essential": true,
       "description": "Inspect interfaces, routes, DNS, and network service state"
     },
@@ -26,6 +28,7 @@
       "category": "development",
       "license": "GPL-2.0-or-later",
       "upstream": "native",
+      "payload": "packages/repository/hello.b64",
       "essential": false,
       "description": "Minimal native SDK example application"
     },
@@ -35,6 +38,7 @@
       "category": "games",
       "license": "MIT",
       "upstream": "https://github.com/mevdschee/2048.c",
+      "payload": "packages/repository/c2048.b64",
       "essential": false,
       "description": "MIT-licensed 2048.c puzzle game port"
     },
@@ -44,6 +48,7 @@
       "category": "development",
       "license": "ISC",
       "upstream": "https://github.com/jart/sectorlisp",
+      "payload": "packages/repository/sectorlisp.b64",
       "essential": false,
       "description": "ISC-licensed McCarthy LISP interpreter port"
     }

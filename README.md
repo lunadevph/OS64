@@ -103,7 +103,8 @@ an error instead of crashing the kernel.
 Run `make smoke-commands` to boot an isolated QEMU disk and invoke every
 installed `/bin` and `/sbin` command. The matrix rejects hangs, crashes, and
 nonzero exit statuses and automatically fails when a new command lacks a test.
-It also installs, executes, inspects, and removes a package through `get`.
+It also downloads, installs, executes, inspects, and removes a package through
+`pm`.
 
 The attached disk is `build/images/os64-disk.img`. `format /dev/sda` creates
 FAT32 plus default ext4 data filesystems; pass `ext2`, `ext3`, or `ext4` as the
@@ -152,32 +153,34 @@ searches application directories containing a Makefile and prints the
 discovered projects; the user build installs each output into its canonical
 root filesystem destination without a duplicate binary cache.
 
-`get` is OS64's small package installer. Its catalog and media trust boundary
-are deliberately local to the installation image, so it does not
-pretend that network downloads or dependency resolution exist yet. Packages
-are ordinary OS64 ELF applications stored under `/usr/share/os64/packages` on
-the read-only media and installed persistently into `/var/apps`:
+`pm` is OS64's small Internet package manager. It retrieves its catalog and
+base64-transported x86_64 ELF payloads from the project on
+`raw.githubusercontent.com` using OS64's certificate-validated HTTPS client.
+Downloaded executables are validated and installed persistently in `/var/apps`;
+they are not embedded in the initramfs:
 
 ```sh
-get list
-get info hello
-get install essentials
-get install hello
+pm update
+pm list
+pm info hello
+pm install essentials
+pm install hello
 hello OS64
-get remove hello
+pm remove hello
 ```
 
 The catalog contains the essential `sysfetch` and `netcheck` tools, the `hello`
 SDK example, and two genuine upstream ports: the MIT-licensed `c2048` game and
 the ISC-licensed `sectorlisp` interpreter. Package installation and removal
 require a root, administrator, or power-user account; listing and inspection
-are available to every user. The manifest is also available in the live system
-at `/usr/share/os64/packages/packages.json`.
+are available to every user. The live image retains only a human-readable
+catalog copy at `/usr/share/os64/packages/packages.json`; it contains no
+package executables.
 
 ```sh
-get install c2048
+pm install c2048
 c2048
-get install sectorlisp
+pm install sectorlisp
 sectorlisp
 ```
 

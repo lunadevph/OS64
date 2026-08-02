@@ -15,7 +15,7 @@ cases = {
  "cp":"cp /etc/hostname /tmp/host.copy", "curl":"curl --help", "date":"date", "dd":"dd --help",
  "dirname":"dirname /tmp/sample", "diskinfo":"diskinfo", "display":"display status", "dmesg":"dmesg",
  "echo":"echo command-smoke", "fill":"fill --help", "find":"find /proc", "free":"free -h", "groups":"groups",
- "get":"get list",
+ "pm":"pm list",
  "head":"head -n 1 /etc/hostname", "hexdump":"hexdump /etc/hostname", "help":"help", "history":"history",
  "host":"host --help", "id":"id", "ifconfig":"ifconfig", "install-apps":"install-apps --help", "ip":"ip route",
  "login":"login --help", "logout":"logout --help", "ls":"ls /etc", "logd":"logd status", "lspci":"lspci", "mkdir":"mkdir --help",
@@ -69,10 +69,11 @@ with tempfile.TemporaryDirectory(prefix="os64-smoke-") as td:
             results.append((name, "FAIL", -1)); failures.append(name); break
     # Exercise the package manager as a lifecycle, not merely as a help/list command.
     for label, command in (
-        ("get-install", "get install hello"),
-        ("get-execute", "hello smoke-test"),
-        ("get-status", "get status"),
-        ("get-remove", "get remove hello"),
+        ("pm-update", "pm update"),
+        ("pm-install", "pm install hello"),
+        ("pm-execute", "hello smoke-test"),
+        ("pm-status", "pm status"),
+        ("pm-remove", "pm remove hello"),
     ):
         child.sendline(command)
         try:

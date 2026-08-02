@@ -209,6 +209,10 @@ images: iso disk
 	@printf "  ISO:    %s\n" "$(ISO)"
 	@printf "  Disk:   %s\n" "$(DISK)"
 
+.PHONY: package-repository
+package-repository:
+	@./scripts/build-package-repository.sh
+
 # ---------------------------------------------------------------------------
 # Directory targets
 # ---------------------------------------------------------------------------
