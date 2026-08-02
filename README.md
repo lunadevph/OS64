@@ -59,7 +59,8 @@ make generate-screenshots
 - `user/bin/` and `user/sbin/` describe normal and administrative commands.
   Their ELF trampolines are built from `user/lib/builtin.c`.
 - `user/games/teteris/` is the optional Teteris application source.
-- `user/packages/` contains installable ELF payloads for the local package catalog.
+- `packages/packages.json` is the validated package catalog; matching native
+  ELF sources live under `packages/apps/`.
 - `rootfs/` is the human-maintained root filesystem template.
 - `libc/` is reserved for the freestanding C library.
 - `sdk/` contains the public application ABI, linker script, build rules, and
@@ -151,8 +152,8 @@ searches application directories containing a Makefile and prints the
 discovered projects; the user build installs each output into its canonical
 root filesystem destination without a duplicate binary cache.
 
-`get` is OS64's small package installer. Its catalog and signed-media trust
-boundary are deliberately local to the installation image, so it does not
+`get` is OS64's small package installer. Its catalog and media trust boundary
+are deliberately local to the installation image, so it does not
 pretend that network downloads or dependency resolution exist yet. Packages
 are ordinary OS64 ELF applications stored under `/usr/share/os64/packages` on
 the read-only media and installed persistently into `/var/apps`:
@@ -160,14 +161,33 @@ the read-only media and installed persistently into `/var/apps`:
 ```sh
 get list
 get info hello
+get install essentials
 get install hello
 hello OS64
 get remove hello
 ```
 
-The initial catalog contains `hello` and `sysfetch`. Package installation and
-removal require a root, administrator, or power-user account; listing and
-inspection are available to every user.
+The initial catalog contains the essential `sysfetch` and `netcheck` tools plus
+the `hello` SDK example. Package installation and removal require a root,
+administrator, or power-user account; listing and inspection are available to
+every user. The manifest is also available in the live system at
+`/usr/share/os64/packages/packages.json`.
+
+## HTTPS browser and hardware discovery
+
+`browser URL` is a small command-line web reader. It accepts HTTP and HTTPS,
+defaults bare hostnames to HTTPS, follows up to five redirects without allowing
+an HTTPS-to-HTTP downgrade, validates certificates and hostnames through the
+existing BearSSL/CA-store path, and renders HTML as wrapped readable text.
+It is intentionally not a JavaScript engine, CSS renderer, or graphical web
+browser. Use `curl` when raw response headers and source are desired.
+
+The PCI bus driver enumerates multifunction devices and records their location,
+vendor/device IDs, class, subclass, programming interface, and revision.
+`lspci` displays classified hardware and `lspci -n` provides numeric output.
+This discovery layer complements the operational ATA, PS/2, framebuffer,
+serial, RTC, PCnet, and RTL8139 drivers and provides a clean base for future
+controller drivers.
 
 The public SDK is in `sdk/`. An application is a freestanding ELF64 executable
 using the OS64 ABI rather than Linux system calls. `sdk/examples/hello` shows

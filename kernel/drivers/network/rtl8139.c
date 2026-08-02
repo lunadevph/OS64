@@ -54,11 +54,15 @@ const uint8_t*rtl8139_mac(void){return mac;}
 
 int rtl8139_send(const void*frame,size_t length){
     if(!present||!frame||length<14||length>1514)return 0;
+    uint16_t status_port=(uint16_t)(io_base+0x10+tx_index*4);
+    unsigned wait=0;
+    while(!(inl(status_port)&0x2000u)&&wait++<1000000u)__asm__ volatile("pause");
+    if(wait>=1000000u)return 0;
     const uint8_t*s=frame;uint8_t*d=tx_buffer[tx_index];
     for(size_t i=0;i<length;i++)d[i]=s[i];
     if(length<60){for(size_t i=length;i<60;i++)d[i]=0;length=60;}
     outl(io_base+0x20+tx_index*4,(uint32_t)(uintptr_t)d);
-    outl(io_base+0x10+tx_index*4,(uint32_t)length);
+    outl(status_port,(uint32_t)length);
     tx_index=(tx_index+1)&3u;tx_count++;return 1;
 }
 

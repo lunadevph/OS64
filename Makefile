@@ -32,6 +32,8 @@ GENERATED        := $(BUILD)/generated
 BUILD_HEADER     := $(GENERATED)/build_config.h
 GRUB_CONFIG      := $(GENERATED)/grub.cfg
 GENERATED_MOTD   := $(GENERATED)/motd
+PACKAGE_MANIFEST := packages/packages.json
+PACKAGE_CATALOG  := $(GENERATED)/package_catalog.h
 BOOTLOADER_SRC   := boot/mbr-layout.asm
 BOOTLOADER_IMAGE := $(STAGED_ROOTFS)/boot/os64-boot.img
 
@@ -114,11 +116,15 @@ quiet_cmd_USER    = USER    userspace
 quiet_cmd_LIBC    = LIBC    $(OBJ)/libc/libos64c.a
       cmd_LIBC    = $(MAKE) -C libc BUILD=$(abspath $(OBJ))/libc OUTPUT=$(abspath $(OBJ))/libc/libos64c.a V=$(V)
 
+quiet_cmd_PKGCAT  = PKGCAT  $(PACKAGE_MANIFEST)
+      cmd_PKGCAT  = python3 scripts/generate-package-catalog.py $(PACKAGE_MANIFEST) $(PACKAGE_CATALOG)
+
 quiet_cmd_KERNEL  = KERNEL  $(KERNEL)
       cmd_KERNEL  = $(MAKE) -C $(KERNEL_SOURCE) \
 		BUILD=$(abspath $(KERNEL_BUILD)) \
 		OUTPUT=$(abspath $(KERNEL)) \
 		CONFIG_HEADER=$(abspath $(BUILD_HEADER)) \
+		PACKAGE_HEADER=$(abspath $(PACKAGE_CATALOG)) \
 		V=$(V)
 
 quiet_cmd_MINI64    = MINI64  $(MINI64)
@@ -235,8 +241,14 @@ scan-apps:
 # ---------------------------------------------------------------------------
 
 .PHONY: user
-user: stage-rootfs scan-apps config libc
+user: stage-rootfs scan-apps config package-catalog libc
 	$(call cmd,USER)
+
+.PHONY: package-catalog
+package-catalog: $(PACKAGE_CATALOG)
+
+$(PACKAGE_CATALOG): $(PACKAGE_MANIFEST) scripts/generate-package-catalog.py | $(BUILD)
+	$(call cmd,PKGCAT)
 
 .PHONY: libc
 libc: | $(OBJ)
@@ -247,7 +259,7 @@ libc: | $(OBJ)
 # ---------------------------------------------------------------------------
 
 .PHONY: kernel
-kernel: user config
+kernel: user config package-catalog
 	$(call cmd,KERNEL)
 	$(Q)printf "  %s\n" "COPY    $(STAGED_ROOTFS)/boot/kernel.bin"
 	$(Q)mkdir -p $(STAGED_ROOTFS)/boot

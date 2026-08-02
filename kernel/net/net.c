@@ -219,7 +219,7 @@ int network_tcp_send(const void*data,size_t length,unsigned spins){
         uint32_t start=tcp_local_seq,expected=start+(uint32_t)chunk;int acknowledged=0;
         for(unsigned attempt=0;attempt<3&&!acknowledged;attempt++){
             tcp_local_seq=start;if(!tcp_send(flags,p+sent,chunk))return -2;tcp_local_seq=expected;
-            for(unsigned long wait=0;wait<spins/4&&!acknowledged&&tcp_state==2;wait++){if(process_cancel_requested())return -3;network_poll();if((int32_t)(tcp_last_ack-expected)>=0)acknowledged=1;__asm__ volatile("pause");}
+            for(unsigned long wait=0;wait<spins&&!acknowledged&&tcp_state==2;wait++){if(process_cancel_requested())return -3;network_poll();if((int32_t)(tcp_last_ack-expected)>=0)acknowledged=1;__asm__ volatile("pause");}
         }
         if(!acknowledged)return -2;
         sent+=chunk;

@@ -11,14 +11,14 @@ for line in conf.splitlines():
         installed += line.split("=", 1)[1].split()
 
 cases = {
- "basename":"basename /tmp/sample", "cat":"cat /proc/mounts", "cd":"cd /tmp", "clear":"clear",
+ "basename":"basename /tmp/sample", "browser":"browser --help", "cat":"cat /proc/mounts", "cd":"cd /tmp", "clear":"clear",
  "cp":"cp /etc/hostname /tmp/host.copy", "curl":"curl --help", "date":"date", "dd":"dd --help",
  "dirname":"dirname /tmp/sample", "diskinfo":"diskinfo", "display":"display status", "dmesg":"dmesg",
  "echo":"echo command-smoke", "fill":"fill --help", "find":"find /proc", "free":"free -h", "groups":"groups",
  "get":"get list",
  "head":"head -n 1 /etc/hostname", "hexdump":"hexdump /etc/hostname", "help":"help", "history":"history",
  "host":"host --help", "id":"id", "ifconfig":"ifconfig", "install-apps":"install-apps --help", "ip":"ip route",
- "login":"login --help", "logout":"logout --help", "ls":"ls /etc", "logd":"logd status", "mkdir":"mkdir --help",
+ "login":"login --help", "logout":"logout --help", "ls":"ls /etc", "logd":"logd status", "lspci":"lspci", "mkdir":"mkdir --help",
  "mkuser":"mkuser --help", "mv":"mv /tmp/host.copy /tmp/host.moved", "nano":"nano --help", "nslookup":"nslookup --help",
  "ntp":"ntp status", "ofp":"ofp", "passwd":"passwd --help", "ping":"ping --help", "ps":"ps", "pwd":"pwd",
  "rm":"rm /tmp/host.moved", "route":"route", "sh":"sh", "stat":"stat /proc/version", "status":"status",

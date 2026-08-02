@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "repository": "OS64 installation media",
+  "packages": [
+    {
+      "name": "sysfetch",
+      "version": "1.0",
+      "category": "system",
+      "essential": true,
+      "description": "Compact OS, memory, user, and network summary"
+    },
+    {
+      "name": "netcheck",
+      "version": "1.0",
+      "category": "network",
+      "essential": true,
+      "description": "Inspect interfaces, routes, DNS, and network service state"
+    },
+    {
+      "name": "hello",
+      "version": "1.0",
+      "category": "development",
+      "essential": false,
+      "description": "Minimal native SDK example application"
+    }
+  ]
+}
