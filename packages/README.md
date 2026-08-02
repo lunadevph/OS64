@@ -22,3 +22,12 @@ packages/apps/example/
 
 Then add its metadata to `packages.json`. Use `get install essentials` to
 install every entry marked `essential`.
+
+## Upstream ports
+
+- `c2048` adapts Maurits van der Schee's MIT-licensed `2048.c` 1.0.3.
+- `sectorlisp` adapts Justine Tunney's ISC-licensed portable SectorLISP
+  reference implementation.
+
+Each port retains its license and a README describing which hosted interfaces
+were replaced by OS64 ABI calls.

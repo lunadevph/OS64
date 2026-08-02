@@ -6,6 +6,8 @@
       "name": "sysfetch",
       "version": "1.0",
       "category": "system",
+      "license": "GPL-2.0-or-later",
+      "upstream": "native",
       "essential": true,
       "description": "Compact OS, memory, user, and network summary"
     },
@@ -13,6 +15,8 @@
       "name": "netcheck",
       "version": "1.0",
       "category": "network",
+      "license": "GPL-2.0-or-later",
+      "upstream": "native",
       "essential": true,
       "description": "Inspect interfaces, routes, DNS, and network service state"
     },
@@ -20,8 +24,28 @@
       "name": "hello",
       "version": "1.0",
       "category": "development",
+      "license": "GPL-2.0-or-later",
+      "upstream": "native",
       "essential": false,
       "description": "Minimal native SDK example application"
+    },
+    {
+      "name": "c2048",
+      "version": "1.0.3",
+      "category": "games",
+      "license": "MIT",
+      "upstream": "https://github.com/mevdschee/2048.c",
+      "essential": false,
+      "description": "MIT-licensed 2048.c puzzle game port"
+    },
+    {
+      "name": "sectorlisp",
+      "version": "1.0",
+      "category": "development",
+      "license": "ISC",
+      "upstream": "https://github.com/jart/sectorlisp",
+      "essential": false,
+      "description": "ISC-licensed McCarthy LISP interpreter port"
     }
   ]
 }

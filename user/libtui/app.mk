@@ -12,7 +12,7 @@ ifneq ($(strip $(CONFIG_HEADER)),)
 CFLAGS += -include $(CONFIG_HEADER)
 endif
 LDFLAGS := -nostdlib -z noexecstack -T $(SDK)/linker.ld
-LIBSRC := $(LIBTUI)/screen.c $(LIBTUI)/renderer.c $(LIBTUI)/event.c $(LIBTUI)/theme.c $(LIBTUI)/window.c $(LIBTUI)/focus.c $(LIBTUI)/input.c $(LIBTUI)/dialog.c $(LIBTUI)/menu.c $(LIBTUI)/listbox.c $(LIBTUI)/table.c $(LIBTUI)/scrollbar.c $(LIBTUI)/widgets.c
+LIBSRC := $(LIBTUI)/screen.c $(LIBTUI)/theme.c $(LIBTUI)/dialog.c $(LIBTUI)/widgets.c
 SOURCES := app.c $(LIBSRC)
 OBJECTS := $(addprefix $(OBJDIR)/,$(notdir $(SOURCES:.c=.o)))
 

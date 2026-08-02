@@ -167,11 +167,22 @@ hello OS64
 get remove hello
 ```
 
-The initial catalog contains the essential `sysfetch` and `netcheck` tools plus
-the `hello` SDK example. Package installation and removal require a root,
-administrator, or power-user account; listing and inspection are available to
-every user. The manifest is also available in the live system at
-`/usr/share/os64/packages/packages.json`.
+The catalog contains the essential `sysfetch` and `netcheck` tools, the `hello`
+SDK example, and two genuine upstream ports: the MIT-licensed `c2048` game and
+the ISC-licensed `sectorlisp` interpreter. Package installation and removal
+require a root, administrator, or power-user account; listing and inspection
+are available to every user. The manifest is also available in the live system
+at `/usr/share/os64/packages/packages.json`.
+
+```sh
+get install c2048
+c2048
+get install sectorlisp
+sectorlisp
+```
+
+Upstream attribution, porting notes, and license texts live beside each port in
+`packages/apps/`. Neither port depends on POSIX syscalls or a hosted C runtime.
 
 ## HTTPS browser and hardware discovery
 
