@@ -62,13 +62,27 @@ void tui_draw_one(struct tui_widget*w,const struct tui_theme*t){
   else fg=t->window_fg;
  }else{fg=t->disabled_fg;win_bg=t->window_bg;}
 
- if(w->type==TUI_LABEL||w->type==TUI_TABS||w->type==TUI_STATUS_BAR){
+ if(w->type==TUI_LABEL||w->type==TUI_TABS||w->type==TUI_STATUS_BAR||w->type==TUI_MENU_BAR){
   uint8_t lf,lb;
   if(w->type==TUI_STATUS_BAR){lf=t->status_fg;lb=t->status_bg;}
+  else if(w->type==TUI_MENU_BAR){lf=t->title_fg;lb=t->title_bg;}
   else if(w->custom_fg||w->custom_bg){lf=w->custom_fg;lb=w->custom_bg;}
   else{lf=fg;lb=win_bg;}
   tui_fill(x,y,w->width,w->height,' ',lf,lb);
   tui_text(x,y,w->text,lf,lb,w->width);
+  return;
+ }
+
+ if(w->type==TUI_TEXT_VIEW){
+  tui_fill(x,y,w->width,w->height,' ',t->window_fg,t->window_bg);
+  int row=0,col=0;size_t i=0,skip=(size_t)(w->scroll<0?0:w->scroll);size_t line=0;
+  while(w->text[i]&&row<w->height){
+   if(line<skip){if(w->text[i++]=='\n')line++;continue;}
+   char ch=w->text[i++];
+   if(ch=='\n'){row++;col=0;continue;}
+   if(col>=w->width){row++;col=0;if(row>=w->height)break;}
+   char one[2]={ch,0};tui_text(x+col,y+row,one,t->window_fg,t->window_bg,1);col++;
+  }
   return;
  }
 
@@ -133,6 +147,15 @@ void tui_draw_one(struct tui_widget*w,const struct tui_theme*t){
   int fill=w->maximum?w->value*w->width/w->maximum:0;
   tui_fill(x,y,fill,1,219,t->success_fg,t->success_bg);
   tui_fill(x+fill,y,w->width-fill,1,176,t->disabled_fg,t->window_bg);
+  return;
+ }
+
+ if(w->type==TUI_HSCROLL||w->type==TUI_VSCROLL){
+  int vertical=w->type==TUI_VSCROLL;
+  int length=vertical?w->height:w->width;
+  tui_fill(x,y,w->width,w->height,176,t->disabled_fg,t->window_bg);
+  int position=w->maximum?((length-1)*w->value/w->maximum):0;
+  tui_fill(x+(vertical?0:position),y+(vertical?position:0),1,1,219,t->window_fg,t->window_bg);
   return;
  }
 }

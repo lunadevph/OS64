@@ -13,6 +13,19 @@ static void number(char *d, unsigned long n) {
     d[j] = 0;
 }
 
+static void append(char *d, size_t cap, const char *s) {
+    size_t n = 0;
+    while (n < cap && d[n]) n++;
+    while (*s && n + 1 < cap) d[n++] = *s++;
+    if (n < cap) d[n] = 0;
+}
+
+static void append_number(char *d, size_t cap, unsigned long n) {
+    char value[24];
+    number(value, n);
+    append(d, cap, value);
+}
+
 int _start(const os64_api_t *api, const char *args) {
     (void)args;
     if (!tui_initialize(api)) {
@@ -28,23 +41,23 @@ int _start(const os64_api_t *api, const char *args) {
 
     static const char *svc_names[] = {
         "fsd", "memoryd", "displayd", "graphicsd",
-        "timed", "diskd", "userd", "acpid", "netd"
+        "timed", "diskd", "userd", "acpid", "netd", "logd"
     };
-    static char svc_rows[9][32];
-    static const char *svc_items[9];
-    for (unsigned i = 0; i < 9; i++)
+    static char svc_rows[10][32];
+    static const char *svc_items[10];
+    for (unsigned i = 0; i < 10; i++)
         svc_items[i] = svc_rows[i];
 
-    struct tui_widget *tbl = tui_table_create(w, 2, 3, 31, 10, svc_items, 9);
+    struct tui_widget *tbl = tui_table_create(w, 2, 3, 31, 11, svc_items, 10);
 
-    struct tui_widget *info = tui_widget_create(TUI_TEXT_VIEW, w, 37, 3, 35, 10, "");
+    struct tui_widget *info = tui_widget_create(TUI_TEXT_VIEW, w, 37, 3, 35, 12, "");
     info->width = 35;
 
     tui_widget_create(TUI_STATUS_BAR, w, 1, 21, 74, 1,
         "F1 Help  F5 Refresh  F10 Exit");
 
     for (;;) {
-        for (unsigned i = 0; i < 9; i++) {
+        for (unsigned i = 0; i < 10; i++) {
             cp(svc_rows[i], svc_names[i]);
             size_t p = 0;
             while (svc_rows[i][p]) p++;
@@ -55,19 +68,18 @@ int _start(const os64_api_t *api, const char *args) {
             cp(svc_rows[i] + p, status ? "OK" : "FAIL");
         }
 
-        char ib[128];
-        cp(ib, "Kernel: ");
-        number(ib + 8, api->system_query("kernel.version"));
-
-        cp(ib + 8 + 1, "\nMemory: ");
-        number(ib + 8 + 9, api->system_query("memory.total_kib") / 1024);
-        cp(ib + 8 + 9 + 1, " MB");
-
-        cp(ib + 8 + 9 + 5, "\nNetwork: ");
-        cp(ib + 8 + 9 + 5 + 9, api->system_query("network.ready") ? "Connected" : "Offline");
-
-        cp(ib + 8 + 9 + 5 + 9 + 9, "\nStorage: ");
-        cp(ib + 8 + 9 + 5 + 9 + 9 + 9, api->system_query("disk.mounted") ? "Mounted" : "Unavailable");
+        char ib[128] = "Hostname: os64\nKernel:   1.0 x86_64\nMemory:   ";
+        append_number(ib, sizeof ib, api->system_query("memory.total_kib") / 1024);
+        append(ib, sizeof ib, " MiB\nHeap free:");
+        append_number(ib, sizeof ib, api->system_query("memory.free_bytes") / 1024);
+        append(ib, sizeof ib, " KiB\nNetwork:  ");
+        append(ib, sizeof ib, api->system_query("network.ready") ? "connected" : "offline");
+        append(ib, sizeof ib, "\n/home:    ");
+        append(ib, sizeof ib, api->system_query("disk.mounted") ? "mounted" : "unavailable");
+        append(ib, sizeof ib, "\n/var:     ");
+        append(ib, sizeof ib, api->system_query("var.mounted") ? "mounted" : "unavailable");
+        append(ib, sizeof ib, "\nUsers:    ");
+        append_number(ib, sizeof ib, api->system_query("users.count"));
         cp(info->text, ib);
 
         tui_request_redraw();
@@ -80,6 +92,8 @@ int _start(const os64_api_t *api, const char *args) {
         if (e.key == TUI_KEY_F1)
             tui_message_box("Help", "F5 refreshes live service status.\nF10 returns to the shell.",
                 TUI_BUTTON_OK);
+        else if (e.key == TUI_KEY_F5)
+            tui_request_redraw();
         else
             tui_dispatch_event(a, &e);
 

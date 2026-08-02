@@ -17,6 +17,9 @@ GAMES := $(notdir $(wildcard games/*))
 GAME_TARGETS := $(addprefix $(ROOTFS)/usr/bin/,$(GAMES))
 APPS := $(notdir $(wildcard apps/*))
 APP_TARGETS := $(addprefix $(ROOTFS)/usr/bin/,$(APPS))
+PACKAGES := $(notdir $(wildcard packages/*))
+PACKAGE_DIR := $(ROOTFS)/usr/share/os64/packages
+PACKAGE_TARGETS := $(addprefix $(PACKAGE_DIR)/,$(PACKAGES))
 
 ifeq ($(V),1)
 Q :=
@@ -25,9 +28,9 @@ Q := @
 MAKEFLAGS += --no-print-directory
 endif
 
-.PHONY: all clean $(GAME_TARGETS) $(APP_TARGETS)
-all: $(BIN_TARGETS) $(SBIN_TARGETS) $(GAME_TARGETS) $(APP_TARGETS)
-$(OBJ) $(ROOTFS)/bin $(ROOTFS)/sbin $(ROOTFS)/usr/bin:
+.PHONY: all clean $(GAME_TARGETS) $(APP_TARGETS) $(PACKAGE_TARGETS)
+all: $(BIN_TARGETS) $(SBIN_TARGETS) $(GAME_TARGETS) $(APP_TARGETS) $(PACKAGE_TARGETS)
+$(OBJ) $(ROOTFS)/bin $(ROOTFS)/sbin $(ROOTFS)/usr/bin $(PACKAGE_DIR):
 	$(Q)printf "  %-7s %s\n" "MKDIR" "$(call __rel,$@)"
 	$(Q)mkdir -p $@
 $(ROOTFS)/bin/%: lib/builtin.c $(SDK)/include/app_abi.h $(SDK)/linker.ld | $(OBJ) $(ROOTFS)/bin
@@ -52,5 +55,11 @@ $(ROOTFS)/usr/bin/$(1): | $(OBJ) $(ROOTFS)/usr/bin
 	$$(Q)$$(MAKE) -C apps/$(1) OUTPUT=$$(abspath $$@) OBJDIR=$$(abspath $$(OBJ))/$(1) CONFIG_HEADER=$$(CONFIG_HEADER) V=$$(V)
 endef
 $(foreach a,$(APPS),$(eval $(call APP_RULE,$(a))))
+define PACKAGE_RULE =
+$(PACKAGE_DIR)/$(1): | $(OBJ) $(PACKAGE_DIR)
+	$$(Q)printf "  %-7s %s\n" "PACKAGE" "$$(call __rel,$$@)"
+	$$(Q)$$(MAKE) -C packages/$(1) OUTPUT=$$(abspath $$@) OBJDIR=$$(abspath $$(OBJ))/package-$(1) V=$$(V)
+endef
+$(foreach p,$(PACKAGES),$(eval $(call PACKAGE_RULE,$(p))))
 clean:
 	$(Q)find $(OBJ) -depth -delete 2>/dev/null || true

@@ -40,6 +40,29 @@ static void path_join(char *out, size_t cap, const char *base, const char *name)
     cp(out + p, name, cap - p);
 }
 
+static void parent_dir(struct pane *p) {
+    size_t n = 0;
+    while (p->path[n]) n++;
+    while (n > 1 && p->path[n - 1] == '/') n--;
+    while (n > 1 && p->path[n - 1] != '/') n--;
+    if (n > 1) n--;
+    p->path[n ? n : 1] = 0;
+    if (!p->path[0]) { p->path[0] = '/'; p->path[1] = 0; }
+}
+
+static int file_action(const os64_api_t *api, const char *command,
+                       const char *source, const char *destination) {
+    char arguments[320];
+    cp(arguments, source, sizeof arguments);
+    if (destination) {
+        size_t n = 0;
+        while (arguments[n]) n++;
+        if (n + 1 < sizeof arguments) arguments[n++] = ' ';
+        cp(arguments + n, destination, sizeof arguments - n);
+    }
+    return api->dispatch(command, arguments);
+}
+
 int _start(const os64_api_t *api, const char *args) {
     (void)args;
     if (!tui_initialize(api)) {
@@ -82,6 +105,7 @@ int _start(const os64_api_t *api, const char *args) {
         path_w->width = 76;
         cp(path_w->text, pb, sizeof pb);
 
+        tui_request_redraw();
         tui_render();
         struct tui_event e;
         tui_next_event(&e);
@@ -97,6 +121,9 @@ int _start(const os64_api_t *api, const char *args) {
                 "F7 prompts for a new directory.\n"
                 "F10 or Esc exits.",
                 TUI_BUTTON_OK);
+        } else if (e.key == '\n' && active->list->selected == 0) {
+            parent_dir(active);
+            load_dir(api, active);
         } else if (e.key == '\n' && active->list->selected > 0) {
             char new_path[96];
             path_join(new_path, sizeof new_path, active->path,
@@ -115,12 +142,7 @@ int _start(const os64_api_t *api, const char *args) {
                 }
             }
         } else if (e.key == '\b') {
-            // parent directory
-            size_t p = 0;
-            while (active->path[p]) p++;
-            while (p > 0 && active->path[p] != '/') p--;
-            if (p == 0) { active->path[1] = 0; }
-            else if (p > 0) { active->path[p] = 0; }
+            parent_dir(active);
             load_dir(api, active);
         } else if (e.key == 0x83) { // F3 View
             if (active->list->selected > 0) {
@@ -137,20 +159,41 @@ int _start(const os64_api_t *api, const char *args) {
                 }
             }
         } else if (e.key == 0x85) { // F5 Copy
-            tui_message_box("Copy",
-                "Copy is not supported through the current ABI.\n"
-                "Use 'cp <source> <dest>' from the shell.",
-                TUI_BUTTON_OK);
+            if (active->list->selected > 0) {
+                struct pane *other = active == &left ? &right : &left;
+                char src[160], dst[160];
+                const char *name = active->items[active->list->selected];
+                path_join(src, sizeof src, active->path, name);
+                path_join(dst, sizeof dst, other->path, name);
+                int rc = file_action(api, "cp", src, dst);
+                load_dir(api, other);
+                tui_message_box(rc ? "Copy failed" : "Copy",
+                    rc ? "The selected item could not be copied." : "File copied successfully.",
+                    TUI_BUTTON_OK);
+            }
         } else if (e.key == 0x86) { // F6 Move
-            tui_message_box("Move",
-                "Move is not supported through the current ABI.\n"
-                "Use 'mv <source> <dest>' from the shell.",
-                TUI_BUTTON_OK);
+            if (active->list->selected > 0) {
+                struct pane *other = active == &left ? &right : &left;
+                char src[160], dst[160];
+                const char *name = active->items[active->list->selected];
+                path_join(src, sizeof src, active->path, name);
+                path_join(dst, sizeof dst, other->path, name);
+                int rc = file_action(api, "mv", src, dst);
+                load_dir(api, active);
+                load_dir(api, other);
+                tui_message_box(rc ? "Move failed" : "Move",
+                    rc ? "The selected item could not be moved." : "File moved successfully.",
+                    TUI_BUTTON_OK);
+            }
         } else if (e.key == 0x87) { // F7 MkDir
             char dirname[64] = "";
             if (tui_input_box("Create Directory", "Name:", dirname, sizeof dirname)) {
-                tui_message_box("MkDir",
-                    "Use 'mkdir <path>' from the shell to create a directory.",
+                char path[160];
+                path_join(path, sizeof path, active->path, dirname);
+                int rc = file_action(api, "mkdir", path, 0);
+                load_dir(api, active);
+                tui_message_box(rc ? "Create failed" : "Create Directory",
+                    rc ? "The directory could not be created." : "Directory created successfully.",
                     TUI_BUTTON_OK);
             }
         } else if (e.key == 0x88) { // F8 Delete
@@ -164,8 +207,13 @@ int _start(const os64_api_t *api, const char *args) {
                 msg[ml++] = '?';
                 msg[ml] = 0;
                 if (tui_confirm("Delete", msg)) {
-                    tui_message_box("Delete",
-                        "Use 'rm <path>' from the shell to delete files.",
+                    char path[160];
+                    path_join(path, sizeof path, active->path,
+                              active->items[active->list->selected]);
+                    int rc = file_action(api, "rm", path, 0);
+                    load_dir(api, active);
+                    tui_message_box(rc ? "Delete failed" : "Delete",
+                        rc ? "The selected item could not be deleted." : "Item deleted successfully.",
                         TUI_BUTTON_OK);
                 }
             }

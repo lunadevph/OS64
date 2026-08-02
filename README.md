@@ -59,6 +59,7 @@ make generate-screenshots
 - `user/bin/` and `user/sbin/` describe normal and administrative commands.
   Their ELF trampolines are built from `user/lib/builtin.c`.
 - `user/games/teteris/` is the optional Teteris application source.
+- `user/packages/` contains installable ELF payloads for the local package catalog.
 - `rootfs/` is the human-maintained root filesystem template.
 - `libc/` is reserved for the freestanding C library.
 - `sdk/` contains the public application ABI, linker script, build rules, and
@@ -101,6 +102,7 @@ an error instead of crashing the kernel.
 Run `make smoke-commands` to boot an isolated QEMU disk and invoke every
 installed `/bin` and `/sbin` command. The matrix rejects hangs, crashes, and
 nonzero exit statuses and automatically fails when a new command lacks a test.
+It also installs, executes, inspects, and removes a package through `get`.
 
 The attached disk is `build/images/os64-disk.img`. `format /dev/sda` creates
 FAT32 plus default ext4 data filesystems; pass `ext2`, `ext3`, or `ext4` as the
@@ -148,6 +150,24 @@ Generic command names are maintained in `user/commands.conf`. `make scan-apps`
 searches application directories containing a Makefile and prints the
 discovered projects; the user build installs each output into its canonical
 root filesystem destination without a duplicate binary cache.
+
+`get` is OS64's small package installer. Its catalog and signed-media trust
+boundary are deliberately local to the installation image, so it does not
+pretend that network downloads or dependency resolution exist yet. Packages
+are ordinary OS64 ELF applications stored under `/usr/share/os64/packages` on
+the read-only media and installed persistently into `/var/apps`:
+
+```sh
+get list
+get info hello
+get install hello
+hello OS64
+get remove hello
+```
+
+The initial catalog contains `hello` and `sysfetch`. Package installation and
+removal require a root, administrator, or power-user account; listing and
+inspection are available to every user.
 
 The public SDK is in `sdk/`. An application is a freestanding ELF64 executable
 using the OS64 ABI rather than Linux system calls. `sdk/examples/hello` shows

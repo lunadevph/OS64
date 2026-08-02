@@ -1,6 +1,8 @@
 #include "tui.h"
 static const os64_api_t*api;
-static struct tui_cell front[80*25],back[80*25];
+#define SCREEN_STRIDE 216
+#define SCREEN_ROWS 64
+static struct tui_cell front[SCREEN_STRIDE*SCREEN_ROWS],back[SCREEN_STRIDE*SCREEN_ROWS];
 static struct tui_screen screen={80,25,front,back};
 static struct tui_theme theme;
 static int ascii_mode,initialized,dirty;
@@ -18,12 +20,12 @@ const os64_api_t*tui_api(void){return api;}
 int tui_initialize(const os64_api_t*a){
  if(!a||a->version<3||!a->terminal_acquire||!a->terminal_acquire())return 0;
  api=a;screen.width=a->terminal_width();screen.height=a->terminal_height();
- if(screen.width>80)screen.width=80;
- if(screen.height>25)screen.height=25;
+ if(screen.width>SCREEN_STRIDE)screen.width=SCREEN_STRIDE;
+ if(screen.height>SCREEN_ROWS)screen.height=SCREEN_ROWS;
  if(screen.width<40||screen.height<15){a->terminal_release();return 0;}
  ascii_mode=a->system_query&&!a->system_query("terminal.unicode");
  theme=tui_theme_dos;
- for(size_t i=0;i<80*25;i++){front[i].character=0xffffffffu;back[i].character=' ';back[i].foreground=theme.desktop_fg;back[i].background=theme.desktop_bg;back[i].attributes=0;}
+ for(size_t i=0;i<SCREEN_STRIDE*SCREEN_ROWS;i++){front[i].character=0xffffffffu;back[i].character=' ';back[i].foreground=theme.desktop_fg;back[i].background=theme.desktop_bg;back[i].attributes=0;}
  window_used=0;tui_widgets_reset();initialized=dirty=1;return 1;
 }
 
@@ -35,7 +37,7 @@ void tui_fill(int x,int y,int w,int h,uint32_t ch,uint8_t fg,uint8_t bg){
  for(int yy=0;yy<h;yy++)for(int xx=0;xx<w;xx++){
   int px=x+xx,py=y+yy;
   if(px>=0&&py>=0&&(size_t)px<screen.width&&(size_t)py<screen.height){
-   struct tui_cell*c=&back[py*80+px];
+   struct tui_cell*c=&back[py*SCREEN_STRIDE+px];
    c->character=ch;c->foreground=fg;c->background=bg;c->attributes=0;
   }
  }
@@ -50,7 +52,7 @@ void tui_text(int x,int y,const char*s,uint8_t fg,uint8_t bg,int limit){
   else if((cp&0xf0)==0xe0&&((uint8_t)s[i]&0xc0)==0x80&&((uint8_t)s[i+1]&0xc0)==0x80){cp=((cp&15)<<12)|(((uint8_t)s[i]&63)<<6)|((uint8_t)s[i+1]&63);i+=2;}
   int px=x+cells++;
   if(px>=0&&y>=0&&(size_t)px<screen.width&&(size_t)y<screen.height){
-   struct tui_cell*c=&back[y*80+px];
+   struct tui_cell*c=&back[y*SCREEN_STRIDE+px];
    c->character=cp;c->foreground=fg;c->background=bg;
   }
  }
@@ -62,7 +64,7 @@ void tui_box(int x,int y,int w,int h,int dbl,uint8_t fg,uint8_t bg){
  if(ascii_mode){tl=tr=bl=br='+';hz='-';vt='|';}
  else if(dbl){tl=0x2554;tr=0x2557;bl=0x255a;br=0x255d;hz=0x2550;vt=0x2551;}
  else{tl=0x250c;tr=0x2510;bl=0x2514;br=0x2518;hz=0x2500;vt=0x2502;}
- tui_fill(x+1,y+1,w-2,h-2,' ',bg,fg);
+ tui_fill(x+1,y+1,w-2,h-2,' ',fg,bg);
  for(int i=1;i<w-1;i++){tui_fill(x+i,y,1,1,hz,fg,bg);tui_fill(x+i,y+h-1,1,1,hz,fg,bg);}
  for(int i=1;i<h-1;i++){tui_fill(x,y+i,1,1,vt,fg,bg);tui_fill(x+w-1,y+i,1,1,vt,fg,bg);}
  tui_fill(x,y,1,1,tl,fg,bg);tui_fill(x+w-1,y,1,1,tr,fg,bg);
@@ -115,6 +117,8 @@ struct tui_application*tui_app_create(const char*name){
 
 struct tui_window*tui_window_create(int x,int y,int w,int h,const char*title,unsigned flags){
  if(window_used>=TUI_MAX_WINDOWS||w<4||h<3)return 0;
+ if(w>(int)screen.width)w=(int)screen.width;
+ if(h>(int)screen.height)h=(int)screen.height;
  if(flags&TUI_WINDOW_CENTER){x=(int)(screen.width-w)/2;y=(int)(screen.height-h)/2;}
  if(x+w<1)x=1-w;
  if(y+h<1)y=1-h;
@@ -162,7 +166,7 @@ void tui_render(void){
  if(!dirty)return;
  for(size_t y=0;y<screen.height;y++)
   for(size_t x=0;x<screen.width;x++){
-   size_t i=y*80+x;
+   size_t i=y*SCREEN_STRIDE+x;
    struct tui_cell*a=&front[i],*b=&back[i];
    if(a->character!=b->character||a->foreground!=b->foreground||a->background!=b->background||a->attributes!=b->attributes){
     api->terminal_write_cell((unsigned)x,(unsigned)y,b->character,attr(b));

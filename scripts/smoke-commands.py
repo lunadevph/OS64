@@ -15,6 +15,7 @@ cases = {
  "cp":"cp /etc/hostname /tmp/host.copy", "curl":"curl --help", "date":"date", "dd":"dd --help",
  "dirname":"dirname /tmp/sample", "diskinfo":"diskinfo", "display":"display status", "dmesg":"dmesg",
  "echo":"echo command-smoke", "fill":"fill --help", "find":"find /proc", "free":"free -h", "groups":"groups",
+ "get":"get list",
  "head":"head -n 1 /etc/hostname", "hexdump":"hexdump /etc/hostname", "help":"help", "history":"history",
  "host":"host --help", "id":"id", "ifconfig":"ifconfig", "install-apps":"install-apps --help", "ip":"ip route",
  "login":"login --help", "logout":"logout --help", "ls":"ls /etc", "logd":"logd status", "mkdir":"mkdir --help",
@@ -66,6 +67,28 @@ with tempfile.TemporaryDirectory(prefix="os64-smoke-") as td:
             if failed: failures.append(name)
         except (pexpect.TIMEOUT, pexpect.EOF):
             results.append((name, "FAIL", -1)); failures.append(name); break
+    # Exercise the package manager as a lifecycle, not merely as a help/list command.
+    for label, command in (
+        ("get-install", "get install hello"),
+        ("get-execute", "hello smoke-test"),
+        ("get-status", "get status"),
+        ("get-remove", "get remove hello"),
+    ):
+        child.sendline(command)
+        try:
+            child.expect(r"root.*?# ", timeout=15)
+            output = child.before
+            child.sendline("status")
+            child.expect(r"Last program exit status: ([0-9]+)", timeout=5)
+            status = int(child.match.group(1))
+            child.expect(r"root.*?# ", timeout=5)
+            failed = status != 0 or "OS64 Crashed" in output
+            print(f"{'FAIL' if failed else 'PASS':4} {label:16} status={status}")
+            if failed: failures.append(label)
+        except (pexpect.TIMEOUT, pexpect.EOF):
+            failures.append(label)
+            print(f"FAIL {label:16} status=-1")
+            break
     child.close(force=True)
     # Validate both on-disk formats with independent host implementations.
     for label, start, count, checker in (
