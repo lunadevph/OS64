@@ -67,8 +67,13 @@ with tempfile.TemporaryDirectory(prefix="os64-smoke-") as td:
             if failed: failures.append(name)
         except (pexpect.TIMEOUT, pexpect.EOF):
             results.append((name, "FAIL", -1)); failures.append(name); break
-    # Exercise the package manager as a lifecycle, not merely as a help/list command.
+    # Exercise indirect ext blocks and the package manager as real lifecycles.
     for label, command in (
+        ("ext-indirect-write", "dd if=/dev/zero of=/var/tmp/indirect.bin bs=4096 count=16"),
+        ("ext-indirect-copy", "cp /var/tmp/indirect.bin /var/tmp/indirect-copy.bin"),
+        ("ext-indirect-stat", "stat /var/tmp/indirect-copy.bin"),
+        ("ext-indirect-remove", "rm /var/tmp/indirect.bin"),
+        ("ext-indirect-clean", "rm /var/tmp/indirect-copy.bin"),
         ("pm-update", "pm update"),
         ("pm-install", "pm install hello"),
         ("pm-execute", "hello smoke-test"),

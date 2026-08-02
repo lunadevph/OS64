@@ -9,6 +9,7 @@
       "license": "GPL-2.0-or-later",
       "upstream": "native",
       "payload": "packages/repository/sysfetch.b64",
+      "sha256": "6418a4d8972858eb217be7170f508e8d931c7e5038c9d42da0b4a0cf94e548eb",
       "essential": true,
       "description": "Compact OS, memory, user, and network summary"
     },
@@ -19,6 +20,7 @@
       "license": "GPL-2.0-or-later",
       "upstream": "native",
       "payload": "packages/repository/netcheck.b64",
+      "sha256": "1136c084e9ee4b0b5c73b52ee436f74fa11aaf2fe10da435866db50a5c805f00",
       "essential": true,
       "description": "Inspect interfaces, routes, DNS, and network service state"
     },
@@ -29,6 +31,7 @@
       "license": "GPL-2.0-or-later",
       "upstream": "native",
       "payload": "packages/repository/hello.b64",
+      "sha256": "0ba7027494203951667aab9735a1aa46757949bff05d7ed9e9a791c0d7c6e096",
       "essential": false,
       "description": "Minimal native SDK example application"
     },
@@ -39,6 +42,7 @@
       "license": "MIT",
       "upstream": "https://github.com/mevdschee/2048.c",
       "payload": "packages/repository/c2048.b64",
+      "sha256": "66b273a68707043ada25c450ae581f47bbf9e0152c50e7e4f061906c8f7e9076",
       "essential": false,
       "description": "MIT-licensed 2048.c puzzle game port"
     },
@@ -49,6 +53,7 @@
       "license": "ISC",
       "upstream": "https://github.com/jart/sectorlisp",
       "payload": "packages/repository/sectorlisp.b64",
+      "sha256": "c8f813caa22c043a69325c7c1016bee1599a8b5240258d6b23f233a7429dfad9",
       "essential": false,
       "description": "ISC-licensed McCarthy LISP interpreter port"
     }

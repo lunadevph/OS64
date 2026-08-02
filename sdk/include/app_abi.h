@@ -1,6 +1,6 @@
 #ifndef OS64_APP_ABI_H
 #define OS64_APP_ABI_H
-#define OS64_ABI_VERSION 6ul
+#define OS64_ABI_VERSION 7ul
 typedef unsigned long os64_size_t;
 typedef struct{unsigned short year;unsigned char month,day,hour,minute,second;}os64_datetime_t;
 typedef struct{char name[96];unsigned char type;unsigned char backend;}os64_dirent_t;
@@ -12,6 +12,8 @@ typedef struct os64_api{
  int (*read_file)(const char *path,unsigned char *data,os64_size_t capacity,os64_size_t *size);
  int (*write_file)(const char *path,const unsigned char *data,os64_size_t size);
  void *(*allocate)(os64_size_t size);
+ void (*deallocate)(void *pointer);
+ void *(*reallocate)(void *pointer,os64_size_t size);
  int (*clock_get)(os64_datetime_t *time);
  const char *(*current_user)(void);
  const char *(*current_directory)(void);

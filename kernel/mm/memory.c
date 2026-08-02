@@ -241,3 +241,43 @@ void kfree(void *pointer)
             previous->next->previous = previous;
     }
 }
+
+void *kcalloc(size_t count,size_t size)
+{
+    if (size && count > (size_t)-1 / size)
+        return 0;
+    size_t bytes = count * size;
+    unsigned char *result = kmalloc(bytes);
+    if (!result)
+        return 0;
+    for (size_t i = 0; i < bytes; i++)
+        result[i] = 0;
+    return result;
+}
+
+void *krealloc(void *pointer,size_t size)
+{
+    if (!pointer)
+        return kmalloc(size);
+    if (!size) {
+        kfree(pointer);
+        return 0;
+    }
+    block_t *block = first;
+    while (block && (void *)(block + 1) != pointer) {
+        if (block->magic != BLOCK_MAGIC)
+            return 0;
+        block = block->next;
+    }
+    if (!block || block->free || block->magic != BLOCK_MAGIC)
+        return 0;
+    if (block->size >= size)
+        return pointer;
+    unsigned char *replacement = kmalloc(size);
+    if (!replacement)
+        return 0;
+    for (size_t i = 0; i < block->size; i++)
+        replacement[i] = ((unsigned char *)pointer)[i];
+    kfree(pointer);
+    return replacement;
+}

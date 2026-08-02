@@ -157,7 +157,8 @@ root filesystem destination without a duplicate binary cache.
 base64-transported x86_64 ELF payloads from the project on
 `raw.githubusercontent.com` using OS64's certificate-validated HTTPS client.
 Downloaded executables are validated and installed persistently in `/var/apps`;
-they are not embedded in the initramfs:
+their catalog SHA-256 digest is checked before installation, and they are not
+embedded in the initramfs:
 
 ```sh
 pm update

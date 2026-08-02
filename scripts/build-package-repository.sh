@@ -32,3 +32,19 @@ PY
     mv "$output_dir/$package.b64.tmp" "$output_dir/$package.b64"
     printf '  %-7s %s\n' "PACKAGE" "packages/repository/$package.b64"
 done
+
+python3 - "$manifest" "$output_dir" <<'PY'
+import base64
+import hashlib
+import json
+import pathlib
+import sys
+
+manifest = pathlib.Path(sys.argv[1])
+repository = pathlib.Path(sys.argv[2])
+document = json.loads(manifest.read_text(encoding="utf-8"))
+for package in document["packages"]:
+    encoded = (repository / f'{package["name"]}.b64').read_bytes()
+    package["sha256"] = hashlib.sha256(base64.b64decode(encoded, validate=False)).hexdigest()
+manifest.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+PY

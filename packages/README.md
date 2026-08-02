@@ -7,7 +7,8 @@ then generates the compact catalog consumed by the kernel.
 
 `pm install` downloads a base64-encoded OS64 ELF over certificate-validated
 HTTPS from `raw.githubusercontent.com`, validates the response and x86_64 ELF
-header, and writes it to persistent `/var/apps`. Package executables are not
+header, verifies its catalog SHA-256 digest, and writes it to persistent
+`/var/apps`. Package executables are not
 bundled in the initramfs. The checked-in `repository/*.b64` files are the
 content served by the online repository, not local installation fallbacks.
 

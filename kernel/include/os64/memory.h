@@ -9,5 +9,7 @@ size_t memory_free_bytes(void);
 size_t memory_heap_bytes(void);
 size_t memory_allocation_count(void);
 void *kmalloc(size_t size);
+void *kcalloc(size_t count,size_t size);
+void *krealloc(void *pointer,size_t size);
 void kfree(void *pointer);
 #endif
