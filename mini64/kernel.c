@@ -610,16 +610,30 @@ static int read_bootmode(char *buf, int max)
         }
     }
     buf[pos] = 0;
+    {
+        const char prefix[] = "set os64_bootmode=";
+        int matched = 1, i = 0;
+        while (prefix[i]) { if (buf[i] != prefix[i]) { matched = 0; break; } i++; }
+        if (matched)
+        {
+            int out = 0;
+            while (buf[i] && buf[i] != '\r' && buf[i] != '\n' && out + 1 < max)
+                buf[out++] = buf[i++];
+            buf[out] = 0;
+        }
+    }
     return 1;
 }
 
-static int clear_panic_flag(void)
+static int delete_root_file(const char *name)
 {
     uint8_t root[512]; int slot;
-    if (!find_entry("PANIC.FLG", root, &slot)) return 0;
+    if (!find_entry(name, root, &slot)) return 0;
     root[slot * 32] = 0xE5;
     return disk_write(cluster_lba(root_cluster), root) && disk_flush();
 }
+
+static int clear_panic_flag(void) { return delete_root_file("PANIC.FLG"); }
 
 static int do_recover(const uint8_t *kdata, uint32_t ksize,
     const uint8_t *idata, uint32_t isize,
@@ -1289,11 +1303,30 @@ void kernel_main(uint32_t mb_info)
             }
             else
             {
-                uint32_t len = 0; while (arg[len]) len++;
+                if (!streq(arg, "normal") && !streq(arg, "desktop") &&
+                    !streq(arg, "cli") && !streq(arg, "debug") &&
+                    !streq(arg, "recovery"))
+                {
+                    puts("  Invalid mode. Use normal, desktop, cli, debug, or recovery.\n");
+                    continue;
+                }
                 uint8_t tmp[512];
                 zero(tmp, 512);
-                for (uint32_t i = 0; i < len && i < 511; i++) tmp[i] = (uint8_t)arg[i];
+                const char *prefix = "set os64_bootmode=";
+                uint32_t len = 0;
+                while (*prefix && len < 511) tmp[len++] = (uint8_t)*prefix++;
+                for (uint32_t i = 0; arg[i] && len < 510; i++) tmp[len++] = (uint8_t)arg[i];
+                tmp[len++] = '\n';
                 disk_store_large("BOOTMODE.CFG", tmp, len);
+                (void)delete_root_file("MODEDESK.FLG");
+                (void)delete_root_file("MODECLI.FLG");
+                (void)delete_root_file("MODEDBG.FLG");
+                (void)delete_root_file("MODERECV.FLG");
+                tmp[0] = '1';
+                if (streq(arg, "desktop")) disk_store_large("MODEDESK.FLG", tmp, 1);
+                else if (streq(arg, "cli")) disk_store_large("MODECLI.FLG", tmp, 1);
+                else if (streq(arg, "debug")) disk_store_large("MODEDBG.FLG", tmp, 1);
+                else if (streq(arg, "recovery")) disk_store_large("MODERECV.FLG", tmp, 1);
                 puts("  Boot mode set to: ");
                 puts(arg);
                 putc('\n');

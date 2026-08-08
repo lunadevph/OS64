@@ -22,8 +22,8 @@ EOF
 ;;
 os64)
 cat > "$work/early.cfg" <<'EOF'
-set root=(hd0,msdos1)
-normal /GRUB.CFG
+search --file --set=root /GRUB.CFG
+configfile /GRUB.CFG
 EOF
 ;;
 *) echo "bootloader: expected grub or os64, got '$loader'" >&2; exit 2 ;;
@@ -31,7 +31,7 @@ esac
 
 grub-mkimage -O i386-pc -C none -p '(hd0,msdos1)/boot/grub' \
     -c "$work/early.cfg" -o "$work/core.img" \
-    biosdisk part_msdos fat normal test search search_fs_file serial terminal multiboot2
+    biosdisk part_msdos fat normal configfile test search search_fs_file serial terminal multiboot2
 cp /usr/lib/grub/i386-pc/boot.img "$work/boot.img"
 
 disk="$work/grub-template.img"

@@ -36,6 +36,7 @@ PACKAGE_MANIFEST := packages/packages.json
 PACKAGE_REPOSITORIES := packages/repositories.json
 PACKAGE_CATALOG  := $(GENERATED)/package_catalog.h
 BOOTLOADER_SRC   := boot/mbr-layout.asm
+BOOT_MANAGER     := boot/os64/manager.cfg
 BOOTLOADER_IMAGE := $(STAGED_ROOTFS)/boot/os64-boot.img
 
 DISK_SIZE        ?= 128M
@@ -292,7 +293,8 @@ mini64: kernel
 
 .PHONY: bootloader
 bootloader: kernel
-	$(Q)cp $(ROOTFS_SOURCE)/boot/os64.cfg $(STAGED_ROOTFS)/boot/os64.cfg
+	$(Q)mkdir -p $(STAGED_ROOTFS)/boot
+	$(Q)cp $(BOOT_MANAGER) $(STAGED_ROOTFS)/boot/os64.cfg
 	$(call cmd,BOOT)
 
 # ---------------------------------------------------------------------------

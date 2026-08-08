@@ -227,7 +227,9 @@ confirmation for automated recovery. Existing FAT installations are mounted
 and updated rather than formatted again.
 
 `BOOTLOADER` in `build.cfg` selects `grub` or `os64`. The `os64` option builds
-the OS64 Boot Manager policy on top of GRUB's audited BIOS/FAT transport. A
+the OS64 Boot Manager policy from `boot/os64/manager.cfg` on top of GRUB's
+audited BIOS/FAT transport. It supports persistent `normal`, `desktop`, `cli`,
+`debug`, and `recovery` modes selected with Mini64's `bootmode MODE` command. A
 kernel panic writes a checksummed record to reserved raw-sector pstore and a
 one-shot FAT boot flag. On the next installed-disk boot, the manager starts
 Mini64 with the kernel and initramfs recovery modules; Mini64 consumes the flag
