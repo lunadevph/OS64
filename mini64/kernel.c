@@ -42,6 +42,34 @@ static void pnum(uint32_t n)
     while (i) putc(b[--i]);
 }
 
+static void phex(uint8_t value)
+{
+    static const char digits[] = "0123456789ABCDEF";
+    putc(digits[value >> 4]); putc(digits[value & 15]);
+}
+
+static uint32_t memory_kib(uint32_t mb_info)
+{
+    const uint8_t *p = (const uint8_t *)(uintptr_t)mb_info;
+    uint64_t usable = 0;
+    if (!p) return 0;
+    uint32_t total = *(const uint32_t *)p;
+    for (uint32_t off = 8; off + 16 <= total; )
+    {
+        uint32_t type = *(const uint32_t *)(p + off), size = *(const uint32_t *)(p + off + 4);
+        if (size < 8) break;
+        if (type == 6 && size >= 16)
+        {
+            uint32_t entry_size = *(const uint32_t *)(p + off + 8);
+            for (uint32_t at = off + 16; entry_size >= 24 && at + entry_size <= off + size; at += entry_size)
+                if (*(const uint32_t *)(p + at + 16) == 1) usable += *(const uint64_t *)(p + at + 8);
+        }
+        off += (size + 7) & ~7u;
+    }
+    usable /= 1024;
+    return usable > 0xFFFFFFFFull ? 0xFFFFFFFFu : (uint32_t)usable;
+}
+
 static void fb_init(uint32_t mb_info)
 {
     const uint8_t *p = (const uint8_t *)(uintptr_t)mb_info;
@@ -211,6 +239,18 @@ static int disk_write(uint32_t lba, const uint8_t *buf)
     pending_writes++;
     /* Keep recovery fast while bounding the amount of uncommitted data. */
     return pending_writes < 128 || disk_flush();
+}
+
+static int disk_identify(char *model, uint32_t *sectors)
+{
+    if (!disk_wait_ready()) return 0;
+    outb(0x1F6, 0xA0); outb(0x1F2, 0); outb(0x1F3, 0); outb(0x1F4, 0); outb(0x1F5, 0); outb(0x1F7, 0xEC);
+    if (!inb(0x1F7) || !disk_wait_data()) return 0;
+    uint16_t words[256]; for (int i = 0; i < 256; i++) words[i] = inw(0x1F0);
+    int n = 0; for (int i = 27; i <= 46; i++) { model[n++] = (char)(words[i] >> 8); model[n++] = (char)words[i]; }
+    while (n && model[n - 1] == ' ') n--;
+    model[n] = 0;
+    *sectors = (uint32_t)words[60] | ((uint32_t)words[61] << 16); return 1;
 }
 
 
@@ -427,7 +467,20 @@ static int disk_store_large(const char *name, const uint8_t *data, uint32_t size
     uint8_t root[512];
     int slot;
     if (find_entry(name, root, &slot))
+    {
+        uint8_t *old = root + slot * 32;
+        uint32_t cluster = r16(old, 26) | ((uint32_t)r16(old, 20) << 16);
+        uint32_t limit = (HOME_SECTORS - data_start) / sectors_per_cluster + 2;
+        for (uint32_t visited = 0; cluster >= 2 && cluster < limit && visited < limit; visited++)
+        {
+            uint32_t next = fat_get(cluster);
+            if (!fat_set(cluster, 0)) return 0;
+            if (next >= 0x0FFFFFF8 || next < 2) break;
+            cluster = next;
+        }
         root[slot * 32] = 0xE5;
+        if (!disk_write(cluster_lba(root_cluster), root)) return 0;
+    }
 
     if (!disk_read(cluster_lba(root_cluster), root)) return 0;
     for (slot = 0; slot < 16; slot++)
@@ -509,6 +562,7 @@ static int parse_modules(uint32_t mb_info, module_t *mods, int max_mods, char na
 }
 
 static int streq(const char *a, const char *b) { while (*a && *b && *a == *b) { a++; b++; } return !*a && !*b; }
+static int streq_ci(const char *a, const char *b) { while (*a && *b) { char x=*a++,y=*b++;if(x>='A'&&x<='Z')x=(char)(x+32);if(y>='A'&&y<='Z')y=(char)(y+32);if(x!=y)return 0;}return !*a&&!*b; }
 static int startswith(const char *s, const char *pre) { while (*pre) if (*s++ != *pre++) return 0; return 1; }
 
 static void list_dir(void)
@@ -559,14 +613,24 @@ static int read_bootmode(char *buf, int max)
     return 1;
 }
 
-static void do_recover(const uint8_t *kdata, uint32_t ksize,
+static int clear_panic_flag(void)
+{
+    uint8_t root[512]; int slot;
+    if (!find_entry("PANIC.FLG", root, &slot)) return 0;
+    root[slot * 32] = 0xE5;
+    return disk_write(cluster_lba(root_cluster), root) && disk_flush();
+}
+
+static int do_recover(const uint8_t *kdata, uint32_t ksize,
     const uint8_t *idata, uint32_t isize,
-    const uint8_t *bldata, uint32_t blsize)
+    const uint8_t *bldata, uint32_t blsize,
+    const uint8_t *cfgdata, uint32_t cfgsize,
+    const uint8_t *mdata, uint32_t msize)
 {
     if (!fat_mounted)
     {
-        if (!fat_format()) { puts("  Failed to format partition.\n"); return; }
-        puts("  Partition formatted.\n");
+        if (fat_init()) puts("  Existing FAT32 partition mounted.\n");
+        else { if (!fat_format()) { puts("  Failed to format partition.\n"); return 0; } puts("  Partition formatted.\n"); }
     }
 
     puts("  Writing KERNEL.BIN... ");
@@ -578,13 +642,13 @@ static void do_recover(const uint8_t *kdata, uint32_t ksize,
     else
     {
         puts("FAILED.\n");
-        return;
+        return 0;
     }
 
     if (idata)
     {
-        puts("  Writing INITRD.TAR... ");
-        if (disk_store_large("INITRD.TAR", idata, isize))
+        puts("  Writing INITRD.BIN... ");
+        if (disk_store_large("INITRD.BIN", idata, isize))
         {
             pnum(isize);
             puts(" bytes written.\n");
@@ -592,8 +656,21 @@ static void do_recover(const uint8_t *kdata, uint32_t ksize,
         else
         {
             puts("FAILED.\n");
-            return;
+            return 0;
         }
+    }
+
+    if (mdata && msize)
+    {
+        puts("  Writing MINI64.BIN... ");
+        if (!disk_store_large("MINI64.BIN", mdata, msize)) { puts("FAILED.\n"); return 0; }
+        pnum(msize); puts(" bytes written.\n");
+    }
+    if (cfgdata && cfgsize)
+    {
+        puts("  Writing GRUB.CFG... ");
+        if (!disk_store_large("GRUB.CFG", cfgdata, cfgsize)) { puts("FAILED.\n"); return 0; }
+        pnum(cfgsize); puts(" bytes written.\n");
     }
 
     if (bldata && blsize)
@@ -604,7 +681,7 @@ static void do_recover(const uint8_t *kdata, uint32_t ksize,
         uint32_t pbar = 0;
         for (uint32_t i = 0; i < sectors; i++)
         {
-            if (!disk_write(i, bldata + i * 512)) { puts("FAILED.\n"); return; }
+            if (!disk_write(i, bldata + i * 512)) { puts("FAILED.\n"); return 0; }
             uint32_t want = (i + 1) * 40 / sectors;
             while (pbar < want) { putc('#'); pbar++; }
         }
@@ -612,24 +689,45 @@ static void do_recover(const uint8_t *kdata, uint32_t ksize,
         putc(']'); puts("100%\n");
     }
 
-    if (!disk_flush()) { puts("  Final disk synchronization FAILED.\n"); return; }
+    if (!disk_flush()) { puts("  Final disk synchronization FAILED.\n"); return 0; }
+    uint8_t root[512];int slot;
+    if (!find_entry("KERNEL.BIN",root,&slot)||!find_entry("INITRD.BIN",root,&slot)) { puts("  Installation verification FAILED.\n"); return 0; }
+    if (bldata && (!find_entry("MINI64.BIN",root,&slot)||!find_entry("GRUB.CFG",root,&slot))) { puts("  Boot file verification FAILED.\n"); return 0; }
     puts("  OS64 recovery complete. Type 'boot' to restart.\n");
+    return 1;
 }
 
 static char kbd_get(void)
 {
+    static int left_shift, right_shift, caps_lock;
     for (;;)
     {
         if (!(inb(0x64) & 1)) continue;
         uint8_t sc = inb(0x60);
+        if (sc == 0xAA) { left_shift = 0; continue; }
+        if (sc == 0xB6) { right_shift = 0; continue; }
         if (sc & 0x80) continue;
+        if (sc == 0x2A) { left_shift = 1; continue; }
+        if (sc == 0x36) { right_shift = 1; continue; }
+        if (sc == 0x3A) { caps_lock = !caps_lock; continue; }
         static const uint8_t map[] = {
             0,0,'1','2','3','4','5','6','7','8','9','0','-','=',0,0,
             'q','w','e','r','t','y','u','i','o','p','[',']',0,0,
             'a','s','d','f','g','h','j','k','l',';','\'','`',0,
             '\\','z','x','c','v','b','n','m',',','.','/',0,'*',0,' '
         };
-        if (sc < sizeof map && map[sc]) return (char)map[sc];
+        if (sc < sizeof map && map[sc])
+        {
+            char c = (char)map[sc]; int shift = left_shift || right_shift;
+            if (c >= 'a' && c <= 'z') { if (shift ^ caps_lock) c = (char)(c - 'a' + 'A'); }
+            else if (shift)
+            {
+                static const char plain[] = "1234567890-=[]\\;',./`";
+                static const char upper[] = "!@#$%^&*()_+{}|:\"<>?~";
+                for (unsigned i = 0; plain[i]; i++) if (c == plain[i]) { c = upper[i]; break; }
+            }
+            return c;
+        }
         if (sc == 0x1C) return '\n';
         if (sc == 0x0E) return '\b';
         if (sc == 0x48) return 0x1B;
@@ -645,7 +743,10 @@ static char kbd_get(void)
 }
 
 static const char *cmd_list[] = {
-    "boot", "recover", "recover-with-bl", "bootmode", "ls", "format", "clear", "help", 0
+    "boot", "reboot", "halt", "install", "recover", "recover-with-bl", "bootmode",
+    "status", "uname", "version", "meminfo", "modules", "diskinfo",
+    "chkfs", "mount", "umount", "sync", "ls", "hexdump", "format",
+    "history", "echo", "clear", "help", 0
 };
 
 #define HIST_MAX 8
@@ -817,23 +918,118 @@ static void readline(char *buf, int max)
     }
 }
 
+static int parse_u32(const char *s, uint32_t *value)
+{
+    uint32_t n = 0; int any = 0;
+    while (*s >= '0' && *s <= '9') { any = 1; n = n * 10u + (uint32_t)(*s++ - '0'); }
+    if (!any || *s) return 0;
+    *value = n;
+    return 1;
+}
+
+static int hex_digit(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static int erase_sectors(char *args)
+{
+    char *tokens[9]; int count = 0;
+    while (*args && count < 9)
+    {
+        while (*args == ' ') args++;
+        if (!*args) break;
+        tokens[count++] = args;
+        while (*args && *args != ' ') args++;
+        if (*args) *args++ = 0;
+    }
+    uint32_t lba = 0, sectors = 1, capacity = 0; int have_lba = 0, have_count = 0;
+    int replace = 0, no_confirm = 0, pattern_kind = 0; uint8_t byte = 0;
+    const char *string = 0; char model[41];
+    for (int i = 0; i < count; i++)
+    {
+        if (streq(tokens[i], "-r")) replace = 1;
+        else if (streq(tokens[i], "-no")) no_confirm = 1;
+        else if (streq(tokens[i], "-h") && i + 1 < count)
+        {
+            const char *v = tokens[++i]; if (v[0] == '0' && (v[1] == 'x' || v[1] == 'X')) v += 2;
+            int a = hex_digit(v[0]), b = hex_digit(v[1]);
+            if (a < 0 || b < 0 || v[2]) { puts("  erase: -h expects exactly one byte (00-FF).\n"); return 0; }
+            if (pattern_kind) { puts("  erase: choose either -h or -s, not both.\n"); return 0; }
+            byte = (uint8_t)((a << 4) | b); pattern_kind = 1;
+        }
+        else if (streq(tokens[i], "-s") && i + 1 < count)
+        {
+            if (pattern_kind) { puts("  erase: choose either -h or -s, not both.\n"); return 0; }
+            string = tokens[++i]; if (!*string) { puts("  erase: empty string pattern.\n"); return 0; }
+            pattern_kind = 2;
+        }
+        else if (tokens[i][0] == '-') { puts("  erase: unknown option.\n"); return 0; }
+        else if (!have_lba) { if (!parse_u32(tokens[i], &lba)) return 0; have_lba = 1; }
+        else if (!have_count) { if (!parse_u32(tokens[i], &sectors)) return 0; have_count = 1; }
+        else { puts("  erase: too many operands.\n"); return 0; }
+    }
+    if (!have_lba || !sectors || (!replace && pattern_kind) || (replace && !pattern_kind))
+    {
+        puts("  Usage: erase LBA [COUNT] [-no]\n");
+        puts("         erase -r LBA [COUNT] (-h BYTE|-s STRING) [-no]\n"); return 0;
+    }
+    if (!disk_identify(model, &capacity) || lba >= capacity || sectors > capacity - lba)
+    { puts("  erase: range is outside the primary ATA disk.\n"); return 0; }
+    if (!no_confirm)
+    {
+        char answer[8]; puts("  WARNING: this permanently overwrites disk sectors.\n  Type erase to continue: ");
+        readline(answer, sizeof answer); if (!streq_ci(answer, "erase")) { puts("  erase: cancelled.\n"); return 0; }
+    }
+    uint8_t block[512]; unsigned slen = 0;
+    if (pattern_kind == 2) while (string[slen] && slen < 64) slen++;
+    for (unsigned i = 0; i < 512; i++) block[i] = pattern_kind == 1 ? byte : pattern_kind == 2 ? (uint8_t)string[i % slen] : 0;
+    for (uint32_t i = 0; i < sectors; i++) if (!disk_write(lba + i, block)) { puts("  erase: ATA write failed.\n"); return 0; }
+    if (!disk_flush()) { puts("  erase: ATA flush failed.\n"); return 0; }
+    fat_mounted = 0;
+    puts("  erase: overwrite complete; sectors synchronized.\n"); return 1;
+}
+
+static void show_partitions(void)
+{
+    uint8_t b[512]; if (!disk_read(0, b)) { puts("  partitions: cannot read MBR.\n"); return; }
+    puts("  IDX TYPE START-LBA SECTORS\n");
+    for (int i = 0; i < 4; i++) { uint8_t *e = b + 446 + i * 16; if (!e[4]) continue; puts("  "); pnum(i + 1); puts("   0x"); phex(e[4]); putc(' '); pnum(r32(e, 8)); putc(' '); pnum(r32(e, 12)); putc('\n'); }
+}
+
+static void show_pstore(void)
+{
+    uint8_t b[512]; if (!disk_read(2039, b)) { puts("  pstore: read failed.\n"); return; }
+    if (r32(b, 0) != 0x52545350) { puts("  pstore: no persistent panic record.\n"); return; }
+    uint32_t n = r32(b, 4); if (n > 496) { puts("  pstore: invalid record length.\n"); return; }
+    puts("  Persistent panic record:\n  "); for (uint32_t i = 0; i < n; i++) putc((char)b[16 + i]); if (!n || b[15 + n] != '\n') putc('\n');
+}
+
 void kernel_main(uint32_t mb_info)
 {
-    module_t mods[4];
-    char mod_names[4][16];
-    int mod_count = parse_modules(mb_info, mods, 4, mod_names);
+    module_t mods[6];
+    char mod_names[6][16];
+    int mod_count = parse_modules(mb_info, mods, 6, mod_names);
 
-    const uint8_t *kdata = 0, *idata = 0, *bldata = 0;
-    uint32_t ksize = 0, isize = 0, blsize = 0;
+    const uint8_t *kdata = 0, *idata = 0, *bldata = 0, *cfgdata = 0, *mdata = 0;
+    uint32_t ksize = 0, isize = 0, blsize = 0, cfgsize = 0, msize = 0;
+    uint32_t usable_kib = memory_kib(mb_info);
     for (int i = 0; i < mod_count; i++)
     {
         uint32_t sz = mods[i].end - mods[i].start;
         if (streq(mod_names[i], "kernel") || streq(mod_names[i], "kernel.bin"))
         { kdata = (const uint8_t *)(uintptr_t)mods[i].start; ksize = sz; }
-        if (streq(mod_names[i], "initrd") || streq(mod_names[i], "initrd.tar"))
+        if (streq(mod_names[i], "initrd") || streq(mod_names[i], "initrd.tar") || streq(mod_names[i], "initrd.bin"))
         { idata = (const uint8_t *)(uintptr_t)mods[i].start; isize = sz; }
         if (streq(mod_names[i], "bootloader") || streq(mod_names[i], "os64-boot.img"))
         { bldata = (const uint8_t *)(uintptr_t)mods[i].start; blsize = sz; }
+        if (streq(mod_names[i], "manager") || streq(mod_names[i], "grub.cfg"))
+        { cfgdata = (const uint8_t *)(uintptr_t)mods[i].start; cfgsize = sz; }
+        if (streq(mod_names[i], "mini64") || streq(mod_names[i], "mini64.bin"))
+        { mdata = (const uint8_t *)(uintptr_t)mods[i].start; msize = sz; }
     }
 
     fb_init(mb_info);
@@ -860,10 +1056,15 @@ void kernel_main(uint32_t mb_info)
         puts("  bootloader module: ");
         pnum(blsize); puts(" bytes\n");
     }
+    if (cfgdata) { puts("  boot policy module: "); pnum(cfgsize); puts(" bytes\n"); }
+    if (mdata) { puts("  Mini64 install module: "); pnum(msize); puts(" bytes\n"); }
     puts("\n");
 
     if (fat_init())
+    {
         puts("  FAT32 partition detected.\n");
+        if (clear_panic_flag()) puts("  Panic boot flag consumed; the next boot will be normal.\n");
+    }
     else
         puts("  No FAT32 partition found (format on recover).\n");
 
@@ -881,21 +1082,53 @@ void kernel_main(uint32_t mb_info)
             puts("\n");
             puts("  Commands:\n");
             puts("    boot                 Restart the system\n");
+            puts("    reboot               Alias for boot\n");
+            puts("    halt                 Stop the processor\n");
+            puts("    install [-no]        Install a complete bootable OS64 system\n");
             puts("    recover              Install OS64 kernel+initrd to disk\n");
             puts("    recover-with-bl      Install kernel+initrd+bootloader\n");
             puts("    bootmode [mode]      Read/set boot mode (e.g. minios)\n");
             puts("    status               Show rescue and disk status\n");
+            puts("    uname | version      Show Mini64 release information\n");
+            puts("    meminfo              Show Multiboot usable memory\n");
+            puts("    modules              Show recovery payload modules\n");
+            puts("    diskinfo             Identify the primary ATA disk\n");
             puts("    chkfs                Validate FAT32 metadata\n");
+            puts("    mount | umount       Mount/unmount the FAT32 volume\n");
+            puts("    sync                 Flush pending ATA writes\n");
             puts("    ls                   List files on the FAT32 partition\n");
+            puts("    hexdump LBA          Dump the first 128 bytes of a sector\n");
+            puts("    partitions           Show the MBR partition table\n");
+            puts("    pstore               Show the persistent panic record\n");
+            puts("    verify LBA BYTE      Verify a sector is filled with hex BYTE\n");
+            puts("    erase LBA [COUNT]    Zero sectors after confirmation\n");
+            puts("    erase -r ...         Replace using -h BYTE or -s STRING\n");
             puts("    format               Create a new FAT32 partition\n");
+            puts("    history              Show command history\n");
+            puts("    echo TEXT            Print text\n");
+            puts("    clear                Clear the display\n");
             puts("    help                 Show this help\n");
             puts("\n");
         }
-        else if (streq(line, "boot"))
+        else if (streq(line, "boot") || streq(line, "reboot"))
         {
             puts("  Rebooting...\n");
             outb(0x64, 0xFE);
             for (;;) __asm__ volatile("cli; hlt");
+        }
+        else if (streq(line, "halt"))
+        {
+            puts("  System halted.\n");
+            for (;;) __asm__ volatile("cli; hlt");
+        }
+        else if (streq(line, "install") || streq(line, "install -no"))
+        {
+            int no_confirm=streq(line,"install -no");
+            if(!kdata||!idata||!bldata||!cfgdata||!mdata){puts("  install: required kernel, initrd, Mini64, policy, or bootloader payload is missing.\n");continue;}
+            if(!fat_mounted&&!fat_init()&&!no_confirm){char answer[12];puts("  WARNING: installation will repartition and format the primary disk.\n  Type install to continue: ");readline(answer,sizeof answer);if(!streq_ci(answer,"install")){puts("  install: cancelled.\n");continue;}}
+            puts("  Installing OS64 to the primary ATA disk...\n");
+            if(do_recover(kdata,ksize,idata,isize,bldata,blsize,cfgdata,cfgsize,mdata,msize))puts("  Installation complete.\n");
+            else puts("  install: installation failed.\n");
         }
         else if (streq(line, "recover"))
         {
@@ -909,7 +1142,7 @@ void kernel_main(uint32_t mb_info)
             }
             else
             {
-                do_recover(kdata, ksize, idata, isize, 0, 0);
+                do_recover(kdata, ksize, idata, isize, 0, 0, 0, 0, 0, 0);
             }
         }
         else if (streq(line, "recover-with-bl"))
@@ -926,11 +1159,11 @@ void kernel_main(uint32_t mb_info)
             else if (!bldata)
             {
                 puts("  No bootloader module available (recovering without it).\n");
-                do_recover(kdata, ksize, idata, isize, 0, 0);
+                do_recover(kdata, ksize, idata, isize, 0, 0, 0, 0, 0, 0);
             }
             else
             {
-                do_recover(kdata, ksize, idata, isize, bldata, blsize);
+                do_recover(kdata, ksize, idata, isize, bldata, blsize, cfgdata, cfgsize, mdata, msize);
             }
         }
         else if (streq(line, "ls"))
@@ -941,12 +1174,36 @@ void kernel_main(uint32_t mb_info)
             }
             list_dir();
         }
+        else if (streq(line, "uname") || streq(line, "version"))
+        {
+            puts("  Mini64 1.0 i386 - OS64 recovery environment\n");
+        }
+        else if (streq(line, "meminfo"))
+        {
+            puts("  Usable memory: "); pnum(usable_kib); puts(" KiB (Multiboot memory map)\n");
+        }
+        else if (streq(line, "modules"))
+        {
+            puts("  kernel.bin   "); if (kdata) { pnum(ksize); puts(" bytes\n"); } else puts("missing\n");
+            puts("  initrd.tar   "); if (idata) { pnum(isize); puts(" bytes\n"); } else puts("missing\n");
+            puts("  bootloader   "); if (bldata) { pnum(blsize); puts(" bytes\n"); } else puts("missing\n");
+            puts("  boot policy  "); if (cfgdata) { pnum(cfgsize); puts(" bytes\n"); } else puts("missing\n");
+            puts("  Mini64 image "); if (mdata) { pnum(msize); puts(" bytes\n"); } else puts("missing\n");
+        }
+        else if (streq(line, "diskinfo"))
+        {
+            char model[41]; uint32_t sectors;
+            if (disk_identify(model, &sectors)) { puts("  Model: "); puts(model); puts("\n  Capacity: "); pnum(sectors / 2048); puts(" MiB (512-byte sectors)\n"); }
+            else puts("  No primary ATA disk detected.\n");
+        }
         else if (streq(line, "status"))
         {
             puts("\n  Rescue environment : ready\n");
             puts("  kernel.bin module  : "); puts(kdata ? "loaded\n" : "missing\n");
             puts("  initrd.tar module  : "); puts(idata ? "loaded\n" : "missing\n");
             puts("  bootloader module  : "); puts(bldata ? "loaded\n" : "missing\n");
+            puts("  boot policy module : "); puts(cfgdata ? "loaded\n" : "missing\n");
+            puts("  Mini64 module      : "); puts(mdata ? "loaded\n" : "missing\n");
             puts("  FAT32 volume       : "); puts((fat_mounted || fat_init()) ? "mounted\n" : "not found\n");
             puts("\n");
         }
@@ -955,6 +1212,51 @@ void kernel_main(uint32_t mb_info)
             puts("  Checking partition table, FAT32 BPB, FSInfo, and root chain... ");
             puts(fat_check() ? "OK\n" : "FAILED\n");
         }
+        else if (streq(line, "mount"))
+        {
+            puts(fat_init() ? "  /dev/hda1 mounted as FAT32 recovery volume.\n" : "  mount: FAT32 volume not found.\n");
+        }
+        else if (streq(line, "umount"))
+        {
+            if (!fat_mounted) puts("  umount: volume is not mounted.\n");
+            else if (!disk_flush()) puts("  umount: disk flush failed.\n");
+            else { fat_mounted = 0; puts("  FAT32 recovery volume unmounted.\n"); }
+        }
+        else if (streq(line, "sync"))
+        {
+            puts(disk_flush() ? "  Disk writes synchronized.\n" : "  sync: ATA flush failed.\n");
+        }
+        else if (startswith(line, "hexdump "))
+        {
+            uint32_t lba; uint8_t sector[512];
+            if (!parse_u32(line + 8, &lba)) { puts("  Usage: hexdump LBA\n"); continue; }
+            if (!disk_read(lba, sector)) { puts("  hexdump: sector read failed.\n"); continue; }
+            for (int i = 0; i < 128; i += 16) { phex((uint8_t)(i >> 8)); phex((uint8_t)i); puts(": "); for (int j = 0; j < 16; j++) { phex(sector[i + j]); putc(' '); } putc('\n'); }
+        }
+        else if (streq(line, "hexdump")) puts("  Usage: hexdump LBA\n");
+        else if (streq(line, "partitions") || streq(line, "fdisk -l")) show_partitions();
+        else if (streq(line, "pstore")) show_pstore();
+        else if (startswith(line, "verify "))
+        {
+            char *arg = line + 7, *space = arg; while (*space && *space != ' ') space++;
+            if (!*space) { puts("  Usage: verify LBA BYTE\n"); continue; }
+            *space++ = 0; while (*space == ' ') space++; uint32_t lba; const char *v = space;
+            if (v[0] == '0' && (v[1] == 'x' || v[1] == 'X')) v += 2;
+            int a = hex_digit(v[0]), b = hex_digit(v[1]); uint8_t sector[512];
+            if (!parse_u32(arg, &lba) || a < 0 || b < 0 || v[2]) { puts("  Usage: verify LBA BYTE\n"); continue; }
+            if (!disk_read(lba, sector)) { puts("  verify: sector read failed.\n"); continue; }
+            uint8_t expected = (uint8_t)((a << 4) | b); int ok = 1; for (int i = 0; i < 512; i++) if (sector[i] != expected) { ok = 0; break; }
+            puts(ok ? "  verify: sector matches.\n" : "  verify: sector differs.\n");
+        }
+        else if (streq(line, "verify")) puts("  Usage: verify LBA BYTE\n");
+        else if (startswith(line, "erase ")) erase_sectors(line + 6);
+        else if (streq(line, "erase")) { puts("  Usage: erase LBA [COUNT] [-no]\n"); puts("         erase -r LBA [COUNT] (-h BYTE|-s STRING) [-no]\n"); }
+        else if (streq(line, "history"))
+        {
+            for (int i = hist_count - 1; i >= 0; i--) { puts("  "); pnum((uint32_t)(hist_count - i)); puts("  "); puts(history[i]); putc('\n'); }
+        }
+        else if (streq(line, "echo")) putc('\n');
+        else if (startswith(line, "echo ")) { puts(line + 5); putc('\n'); }
         else if (streq(line, "format"))
         {
             puts("  Creating FAT32 partition...\n");

@@ -1,0 +1,12 @@
+#ifndef OS64_CXX_NEW
+#define OS64_CXX_NEW
+#include <stddef.h>
+void *operator new(size_t) noexcept;
+void *operator new[](size_t) noexcept;
+void operator delete(void *) noexcept;
+void operator delete[](void *) noexcept;
+inline void *operator new(size_t, void *place) noexcept { return place; }
+inline void *operator new[](size_t, void *place) noexcept { return place; }
+inline void operator delete(void *, void *) noexcept {}
+inline void operator delete[](void *, void *) noexcept {}
+#endif

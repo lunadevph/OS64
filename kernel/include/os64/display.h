@@ -30,4 +30,10 @@ int display_mode_supported(void);
 int display_set_mode(unsigned width,unsigned height);
 unsigned display_pixel_width(void);
 unsigned display_pixel_height(void);
+uint32_t display_graphics_get_pixel(unsigned x,unsigned y);
+void display_graphics_put_pixel(unsigned x,unsigned y,uint32_t color);
+void display_graphics_fill(unsigned x,unsigned y,unsigned width,unsigned height,uint32_t color);
+void display_graphics_text(unsigned x,unsigned y,const char *text,uint32_t foreground,uint32_t background,unsigned scale);
+typedef void (*display_output_sink_t)(char character,void *context);
+void display_output_sink(display_output_sink_t sink,void *context);
 #endif

@@ -33,6 +33,7 @@ BUILD_HEADER     := $(GENERATED)/build_config.h
 GRUB_CONFIG      := $(GENERATED)/grub.cfg
 GENERATED_MOTD   := $(GENERATED)/motd
 PACKAGE_MANIFEST := packages/packages.json
+PACKAGE_REPOSITORIES := packages/repositories.json
 PACKAGE_CATALOG  := $(GENERATED)/package_catalog.h
 BOOTLOADER_SRC   := boot/mbr-layout.asm
 BOOTLOADER_IMAGE := $(STAGED_ROOTFS)/boot/os64-boot.img
@@ -117,7 +118,7 @@ quiet_cmd_LIBC    = LIBC    $(OBJ)/libc/libos64c.a
       cmd_LIBC    = $(MAKE) -C libc BUILD=$(abspath $(OBJ))/libc OUTPUT=$(abspath $(OBJ))/libc/libos64c.a V=$(V)
 
 quiet_cmd_PKGCAT  = PKGCAT  $(PACKAGE_MANIFEST)
-      cmd_PKGCAT  = python3 scripts/generate-package-catalog.py $(PACKAGE_MANIFEST) $(PACKAGE_CATALOG)
+      cmd_PKGCAT  = python3 scripts/generate-package-catalog.py $(PACKAGE_MANIFEST) $(PACKAGE_CATALOG) $(PACKAGE_REPOSITORIES)
 
 quiet_cmd_KERNEL  = KERNEL  $(KERNEL)
       cmd_KERNEL  = $(MAKE) -C $(KERNEL_SOURCE) \
@@ -137,7 +138,8 @@ quiet_cmd_BOOT    = BOOT    $(BOOTLOADER_IMAGE)
       cmd_BOOT    = ./scripts/build-bootloader.sh \
 		$(BOOTLOADER_SRC) \
 		$(BOOTLOADER_IMAGE) \
-		$(OBJ)/bootloader
+		$(OBJ)/bootloader \
+		$(BOOTLOADER)
 
 quiet_cmd_INITRD  = INITRD  $(INITRD)
       cmd_INITRD  = ./scripts/build-initrd.sh \
@@ -152,7 +154,9 @@ quiet_cmd_ISO     = ISO     $(ISO)
 		$(ISO_STAGE) \
 		$(ISO) \
 		$(MINI64) \
-		$(BOOTLOADER_IMAGE)
+		$(BOOTLOADER_IMAGE) \
+		$(STAGED_ROOTFS)/boot/os64.cfg \
+		boot/grub/theme
 
 quiet_cmd_DISK    = DISK    $(DISK)
       cmd_DISK    = ./scripts/create-disk.sh $(DISK) $(DISK_SIZE)
@@ -235,6 +239,11 @@ config: stage-rootfs
 	$(Q)printf "  %s\n" "CONFIG  build.cfg"
 	$(Q)./scripts/gen-build-config.sh build.cfg $(BUILD_HEADER) $(GRUB_CONFIG) $(GENERATED_MOTD)
 	$(Q)cp $(GENERATED_MOTD) $(STAGED_ROOTFS)/etc/motd
+	$(Q)mkdir -p $(STAGED_ROOTFS)/usr/share/images
+	$(Q)cp -a $(ROOTFS_SOURCE)/usr/share/images/. $(STAGED_ROOTFS)/usr/share/images/
+	$(Q)python3 scripts/generate-gui-assets.py \
+		$(ROOTFS_SOURCE)/usr/share/images/os64.ppm \
+		$(STAGED_ROOTFS)/usr/share/images/os64.bmp
 
 .PHONY: scan-apps
 scan-apps:
@@ -251,7 +260,7 @@ user: stage-rootfs scan-apps config package-catalog libc
 .PHONY: package-catalog
 package-catalog: $(PACKAGE_CATALOG)
 
-$(PACKAGE_CATALOG): $(PACKAGE_MANIFEST) scripts/generate-package-catalog.py | $(BUILD)
+$(PACKAGE_CATALOG): $(PACKAGE_MANIFEST) $(PACKAGE_REPOSITORIES) scripts/generate-package-catalog.py | $(BUILD)
 	$(call cmd,PKGCAT)
 
 .PHONY: libc
@@ -282,6 +291,7 @@ mini64: kernel
 
 .PHONY: bootloader
 bootloader: kernel
+	$(Q)cp $(ROOTFS_SOURCE)/boot/os64.cfg $(STAGED_ROOTFS)/boot/os64.cfg
 	$(call cmd,BOOT)
 
 # ---------------------------------------------------------------------------
@@ -289,7 +299,7 @@ bootloader: kernel
 # ---------------------------------------------------------------------------
 
 .PHONY: initrd
-initrd: bootloader | $(INITRD_DIR)
+initrd: bootloader mini64 | $(INITRD_DIR)
 	$(call cmd,INITRD)
 
 # ---------------------------------------------------------------------------
@@ -297,7 +307,7 @@ initrd: bootloader | $(INITRD_DIR)
 # ---------------------------------------------------------------------------
 
 .PHONY: iso
-iso: initrd mini64 | $(IMAGES) $(ISO_STAGE)
+iso: initrd | $(IMAGES) $(ISO_STAGE)
 	$(call cmd,ISO)
 
 # ---------------------------------------------------------------------------

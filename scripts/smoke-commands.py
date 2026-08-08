@@ -11,7 +11,7 @@ for line in conf.splitlines():
         installed += line.split("=", 1)[1].split()
 
 cases = {
- "basename":"basename /tmp/sample", "browser":"browser --help", "cat":"cat /proc/mounts", "cd":"cd /tmp", "clear":"clear",
+ "basename":"basename /tmp/sample", "cat":"cat /proc/mounts", "cd":"cd /tmp", "clear":"clear",
  "cp":"cp /etc/hostname /tmp/host.copy", "curl":"curl --help", "date":"date", "dd":"dd --help",
  "dirname":"dirname /tmp/sample", "diskinfo":"diskinfo", "display":"display status", "dmesg":"dmesg",
  "echo":"echo command-smoke", "fill":"fill --help", "find":"find /proc", "free":"free -h", "groups":"groups",
@@ -20,10 +20,10 @@ cases = {
  "host":"host --help", "id":"id", "ifconfig":"ifconfig", "install-apps":"install-apps --help", "ip":"ip route",
  "login":"login --help", "logout":"logout --help", "ls":"ls /etc", "logd":"logd status", "lspci":"lspci", "mkdir":"mkdir --help",
  "mkuser":"mkuser --help", "mv":"mv /tmp/host.copy /tmp/host.moved", "nano":"nano --help", "nslookup":"nslookup --help",
- "ntp":"ntp status", "ofp":"ofp", "passwd":"passwd --help", "ping":"ping --help", "ps":"ps", "pwd":"pwd",
- "rm":"rm /tmp/host.moved", "route":"route", "sh":"sh", "stat":"stat /proc/version", "status":"status",
+ "ntp":"ntp status", "ofp":"ofp", "panic":"panic --help", "passwd":"passwd --help", "ping":"ping --help", "ps":"ps", "pwd":"pwd",
+ "pstore":"pstore --help", "rm":"rm /tmp/host.moved", "route":"route", "sh":"sh", "stat":"stat /proc/version", "status":"status",
  "su":"su --help", "sudo":"sudo --help", "sync":"sync", "tail":"tail -n 1 /etc/hostname", "time":"time",
- "touch":"touch /tmp/touched", "truncate":"truncate -s 8 /tmp/touched", "umask":"umask", "uname":"uname -a",
+ "touch":"touch /tmp/touched", "truncate":"truncate -s 8 /tmp/touched", "tty":"tty", "umask":"umask", "uname":"uname -a",
  "wc":"wc -c /etc/hostname", "who":"who", "whoami":"whoami", "xxd":"xxd /etc/hostname",
  "acpid":"acpid status", "chkfs":"chkfs -a", "chmod":"chmod 0600 /tmp/touched", "chgrp":"chgrp --help",
  "chown":"chown --help", "diskd":"diskd status", "displayd":"displayd status", "format":"format /dev/sda",
@@ -75,6 +75,7 @@ with tempfile.TemporaryDirectory(prefix="os64-smoke-") as td:
         ("ext-indirect-remove", "rm /var/tmp/indirect.bin"),
         ("ext-indirect-clean", "rm /var/tmp/indirect-copy.bin"),
         ("pm-update", "pm update"),
+        ("pm-mirrors", "pm mirrors"),
         ("pm-install", "pm install hello"),
         ("pm-execute", "hello smoke-test"),
         ("pm-status", "pm status"),

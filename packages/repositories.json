@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "repositories": [
+    { "name": "apps", "host": "raw.githubusercontent.com", "base": "/lunadevph/OS64-Apps/main/" },
+    { "name": "source-fallback", "host": "raw.githubusercontent.com", "base": "/lunadevph/OS64/main/" }
+  ]
+}

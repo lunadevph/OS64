@@ -36,7 +36,7 @@ struct tui_screen{size_t width,height;struct tui_cell*front_buffer,*back_buffer;
 struct tui_event{enum tui_event_type type;uint32_t key,modifiers;uint64_t timestamp;};
 struct tui_window;
 struct tui_widget{
- enum tui_widget_type type;int x,y,width,height;int visible,enabled,focused,checked,value,maximum,scroll,cursor,insert_mode;char text[128];const char**items;size_t item_count,selected;struct tui_window*parent;void(*activate)(struct tui_widget*);uint8_t custom_fg,custom_bg;
+ enum tui_widget_type type;int x,y,width,height;int visible,enabled,focused,checked,value,maximum,scroll,cursor,insert_mode;char text[4096];const char**items;size_t item_count,selected;struct tui_window*parent;void(*activate)(struct tui_widget*);uint8_t custom_fg,custom_bg;
 };
 struct tui_window{int x,y,width,height;char title[64];unsigned flags;int visible,focused,double_border;struct tui_widget*children[TUI_MAX_WIDGETS];size_t child_count,focus_index;};
 struct tui_application{char name[64];int running,redraw;struct tui_window*windows[TUI_MAX_WINDOWS];size_t window_count;};

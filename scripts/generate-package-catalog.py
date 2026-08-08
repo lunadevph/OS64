@@ -6,9 +6,27 @@ import re
 import sys
 
 source, output = map(pathlib.Path, sys.argv[1:3])
+repositories_source = pathlib.Path(sys.argv[3]) if len(sys.argv) > 3 else source
 document = json.loads(source.read_text(encoding="utf-8"))
 if document.get("schema") != 1 or not isinstance(document.get("packages"), list):
     raise SystemExit("invalid package catalog schema")
+
+repositories_document = json.loads(repositories_source.read_text(encoding="utf-8"))
+repositories = repositories_document.get("repositories")
+if not isinstance(repositories, list) or not repositories or len(repositories) > 8:
+    raise SystemExit("package catalog requires 1-8 repositories")
+repository_rows = []
+for repository in repositories:
+    name = repository.get("name", "")
+    host = repository.get("host", "")
+    base = repository.get("base", "")
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,15}", name):
+        raise SystemExit(f"invalid repository name: {name!r}")
+    if not re.fullmatch(r"[A-Za-z0-9.-]{1,95}", host):
+        raise SystemExit(f"invalid repository host: {host!r}")
+    if not re.fullmatch(r"/[A-Za-z0-9._/-]{1,159}/", base) or ".." in base:
+        raise SystemExit(f"invalid repository base: {base!r}")
+    repository_rows.append((name, host, base))
 
 seen = set()
 rows = []
@@ -47,6 +65,11 @@ for package in document["packages"]:
 
 lines = ["/* Generated from packages/packages.json. Do not edit. */",
          "#ifndef OS64_PACKAGE_CATALOG_H", "#define OS64_PACKAGE_CATALOG_H",
+         "#define OS64_PACKAGE_REPOSITORIES(X) \\"]
+for index, (name, host, base) in enumerate(repository_rows):
+    suffix = " \\" if index + 1 < len(repository_rows) else ""
+    lines.append(f' X("{name}","{host}","{base}"){suffix}')
+lines += ["#define OS64_PACKAGE_REPOSITORY_COUNT %d" % len(repository_rows),
          "#define OS64_PACKAGE_CATALOG(X) \\"]
 for index, row in enumerate(rows):
     name, version, category, license_id, upstream, payload, sha256, essential, description = row

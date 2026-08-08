@@ -17,9 +17,9 @@ void vfs_init(void){tmpfs_init();}
 const char*vfs_mount_source(const char*p){if(starts(p,"/dev"))return "devfs";if(starts(p,"/proc"))return "procfs (ro)";if(starts(p,"/tmp"))return "tmpfs";if(starts(p,"/home")||starts(p,"/mnt/os64"))return "/dev/sda1 (fat32)";if(starts(p,"/var")||starts(p,"/root")||starts(p,"/mnt")){const char*t=varfs_type();return t[3]=='4'?"/dev/sda2 (ext4)":t[3]=='3'?"/dev/sda2 (ext3)":"/dev/sda2 (ext2)";}return "initramfs (ro)";}
 static int stat_raw(const char*p,vfs_stat_t*st){
     if(!p||!st)return 0;
-    static const char*chr[]={"/dev/net0","/dev/console","/dev/null","/dev/zero","/dev/full","/dev/empty","/dev/random","/dev/urandom"};
+    static const char*chr[]={"/dev/net0","/dev/console","/dev/tty","/dev/tty0","/dev/null","/dev/zero","/dev/full","/dev/empty","/dev/random","/dev/urandom"};
     static const char*blk[]={"/dev/sda","/dev/sda1","/dev/sda2"};
-    for(unsigned i=0;i<8;i++)if(equal(p,chr[i])){st->size=0;st->mode=0666;st->uid=st->gid=0;st->type=VFS_TYPE_CHAR_DEVICE;st->backend=VFS_DEVFS;return 1;}
+    for(unsigned i=0;i<10;i++)if(equal(p,chr[i])){st->size=0;st->mode=0666;st->uid=st->gid=0;st->type=VFS_TYPE_CHAR_DEVICE;st->backend=VFS_DEVFS;return 1;}
     for(unsigned i=0;i<3;i++)if(equal(p,blk[i])){st->size=0;st->mode=0660;st->uid=st->gid=0;st->type=VFS_TYPE_BLOCK_DEVICE;st->backend=VFS_DEVFS;return 1;}
     if(equal(p,"/")||equal(p,"/home")||equal(p,"/mnt")||equal(p,"/mnt/os64")||equal(p,"/var")){st->size=0;st->mode=0755;st->uid=st->gid=0;st->type=VFS_TYPE_DIRECTORY;st->backend=VFS_RAMFS;return 1;}
     if(equal(p,"/dev")){st->size=0;st->mode=0755;st->uid=st->gid=0;st->type=VFS_TYPE_DIRECTORY;st->backend=VFS_DEVFS;return 1;}

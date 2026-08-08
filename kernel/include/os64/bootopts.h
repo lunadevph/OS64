@@ -7,6 +7,7 @@ const char *bootopts_mode(void);
 int bootopts_debug(void);
 int bootopts_recovery(void);
 int bootopts_cli(void);
+int bootopts_desktop(void);
 int bootopts_serial(void);
 const void *bootopts_initrd_start(void);
 const void *bootopts_initrd_end(void);

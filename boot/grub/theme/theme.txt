@@ -1,0 +1,82 @@
+# OS64 GRUB theme. Fonts and artwork are generated while staging the ISO.
+desktop-color: "#08111c"
+desktop-image: "background.png"
+desktop-image-scale-method: "stretch"
+title-text: ""
+message-color: "#dce8ef"
+message-bg-color: "#08111c"
+
++ label {
+    left = 15%
+    top = 6%
+    width = 70%
+    height = 48
+    text = "OS64"
+    color = "#4de091"
+    font = "OS64 Display 30"
+    align = "left"
+}
+
++ label {
+    left = 15%
+    top = 13%
+    width = 70%
+    height = 24
+    text = "BOOT MANAGER  /  VERSION 1.0"
+    color = "#8fa8b8"
+    font = "OS64 Mono 14"
+    align = "left"
+}
+
++ boot_menu {
+    id = "__menu__"
+    left = 15%
+    top = 21%
+    width = 70%
+    height = 58%
+    item_font = "OS64 Mono 14"
+    selected_item_font = "OS64 Mono 14"
+    item_color = "#dce8ef"
+    selected_item_color = "#ffffff"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 34
+    item_padding = 16
+    item_spacing = 4
+    icon_width = 0
+    icon_height = 0
+    scrollbar = false
+}
+
++ label {
+    left = 15%
+    top = 82%
+    width = 70%
+    height = 24
+    text = "Select a boot profile with UP / DOWN, then press ENTER"
+    color = "#9cb0be"
+    font = "OS64 Mono 14"
+    align = "center"
+}
+
++ label {
+    left = 15%
+    top = 87%
+    width = 70%
+    height = 24
+    text = "ENTER  Boot     E  Edit     C  Console"
+    color = "#687f8f"
+    font = "OS64 Mono 14"
+    align = "center"
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 30%
+    top = 92%
+    width = 40%
+    height = 6
+    fg_color = "#4de091"
+    bg_color = "#203543"
+    border_color = "#3a5b67"
+    show_text = false
+}

@@ -1,6 +1,13 @@
 # OS64 package repository
 
-`packages.json` is the authoritative catalog. Each catalog entry must have a
+`packages.json` is the authoritative catalog. `repositories.json` is a separate,
+ordered mirror configuration; `pm` tries each HTTPS endpoint until a validated
+response is received. This lets package payloads live in dedicated repositories
+instead of coupling the package service to the main OS64 source repository.
+The official published repository is
+`https://github.com/lunadevph/OS64-Apps`; the main OS64 repository remains a
+fallback mirror for compatibility.
+Each catalog entry must have a
 matching buildable application under `apps/NAME/`. The build validates names,
 versions, categories, descriptions, duplicate entries, and missing sources,
 then generates the compact catalog consumed by the kernel.

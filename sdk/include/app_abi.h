@@ -35,6 +35,7 @@ typedef struct os64_api{
  unsigned int (*get_groups)(void);
  int (*is_admin)(void);
  int (*is_root)(void);
+ int (*browser_fetch)(const char *url,char *text,os64_size_t capacity,os64_size_t *size);
 }os64_api_t;
 typedef int (*os64_entry_t)(const os64_api_t *api,const char *args);
 #endif

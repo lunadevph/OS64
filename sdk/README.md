@@ -29,6 +29,14 @@ include $(SDK)/app.mk
 Set `SOURCES := app.c module.c` for multiple translation units. Applications
 must validate `api->version == OS64_ABI_VERSION` before using the table.
 
+Native freestanding C++17 applications are supported with `g++`. Set
+`SOURCES := app.cpp` and implement `int os64_main(const os64_api_t *, const
+char *)`; the SDK supplies `_start`, initializes libc, runs global constructors
+and destructors, and provides `new`/`delete` plus essential freestanding C++ ABI
+hooks. Exceptions, RTTI, and the hosted C++ standard library are intentionally
+disabled. See `sdk/examples/cpp` and build it with
+`make -C sdk/examples/cpp`.
+
 Long-running applications should periodically call
 `api->system_query("process.interrupted")`. A nonzero result means Ctrl+C was
 pressed for the foreground application; clean up and return status 130.

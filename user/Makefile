@@ -18,6 +18,7 @@ GAME_TARGETS := $(addprefix $(ROOTFS)/usr/bin/,$(GAMES))
 APPS := $(notdir $(wildcard apps/*))
 APP_TARGETS := $(addprefix $(ROOTFS)/usr/bin/,$(APPS))
 PACKAGE_MANIFEST ?= ../packages/packages.json
+PACKAGE_REPOSITORIES ?= ../packages/repositories.json
 PACKAGE_DIR := $(ROOTFS)/usr/share/os64/packages
 PACKAGE_CATALOG_TARGET := $(PACKAGE_DIR)/packages.json
 
@@ -29,7 +30,7 @@ MAKEFLAGS += --no-print-directory
 endif
 
 .PHONY: all clean $(GAME_TARGETS) $(APP_TARGETS)
-all: $(BIN_TARGETS) $(SBIN_TARGETS) $(GAME_TARGETS) $(APP_TARGETS) $(PACKAGE_CATALOG_TARGET)
+all: $(BIN_TARGETS) $(SBIN_TARGETS) $(GAME_TARGETS) $(APP_TARGETS) $(PACKAGE_CATALOG_TARGET) $(PACKAGE_DIR)/repositories.json
 $(OBJ) $(ROOTFS)/bin $(ROOTFS)/sbin $(ROOTFS)/usr/bin $(PACKAGE_DIR):
 	$(Q)printf "  %-7s %s\n" "MKDIR" "$(call __rel,$@)"
 	$(Q)mkdir -p $@
@@ -57,7 +58,10 @@ endef
 $(foreach a,$(APPS),$(eval $(call APP_RULE,$(a))))
 $(PACKAGE_CATALOG_TARGET): $(PACKAGE_MANIFEST) | $(PACKAGE_DIR)
 	$(Q)printf "  %-7s %s\n" "INSTALL" "$(call __rel,$@)"
-	$(Q)find $(PACKAGE_DIR) -maxdepth 1 -type f ! -name packages.json -delete
+	$(Q)find $(PACKAGE_DIR) -maxdepth 1 -type f ! -name packages.json ! -name repositories.json -delete
+	$(Q)cp $< $@
+$(PACKAGE_DIR)/repositories.json: $(PACKAGE_REPOSITORIES) | $(PACKAGE_DIR)
+	$(Q)printf "  %-7s %s\n" "INSTALL" "$(call __rel,$@)"
 	$(Q)cp $< $@
 clean:
 	$(Q)find $(OBJ) -depth -delete 2>/dev/null || true

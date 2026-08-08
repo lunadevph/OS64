@@ -16,6 +16,8 @@ version=$(value KERNEL_VERSION)
 description=$(value OS_DESCRIPTION)
 policy=$(value SYSTEM_POLICY)
 arch=$(value ARCHITECTURE)
+bootloader=$(value BOOTLOADER)
+case "$bootloader" in grub|os64) ;; *) echo "build config: BOOTLOADER must be grub or os64" >&2; exit 1;; esac
 mkdir -p "$(dirname "$header")" "$(dirname "$grub")" "$(dirname "$motd")"
 sed -e "s/@OS_NAME@/$name/g" -e "s/@KERNEL_VERSION@/$version/g" \
     -e "s/@OS_DESCRIPTION@/$description/g" -e "s/@SYSTEM_POLICY@/$policy/g" \

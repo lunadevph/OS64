@@ -134,10 +134,14 @@ static void scroll(void) {
     row=height-1;
 }
 static void apply(void) { color=(uint8_t)(fg|(bold?8:0)); serial_raw("\033[0;"); if(bold)serial_raw("1;"); serial_raw(fg==1?"34m":fg==2?"32m":fg==3?"36m":fg==4?"31m":fg==6?"33m":"37m"); }
+static display_output_sink_t output_sink;
+static void *output_sink_context;
+void display_output_sink(display_output_sink_t sink,void *context){output_sink=sink;output_sink_context=context;}
 static int tag(const unsigned char *p,size_t n,const char *s){size_t i=0;while(s[i]&&i<n&&p[i]==(unsigned char)s[i])i++;return !s[i];}
 
 void display_init(uint64_t multiboot_address) {
     serial_present=0;initialized=0;characters=0;
+    output_sink=0;output_sink_context=0;
     cursor_x=cursor_y=0;cursor_blink_ns=0;cursor_visible=cursor_full_block=cursor_drawn=0;
     framebuffer=0;framebuffer_info(multiboot_address);
     if(!framebuffer)vga_load_font();
@@ -154,6 +158,7 @@ void display_init(uint64_t multiboot_address) {
 int display_serial_available(void){return serial_present;}
 void display_color(uint8_t c) { fg=(uint8_t)(c&7);bold=(uint8_t)((c&8)!=0);apply(); }
 void display_putc(char c) {
+    if(output_sink){characters++;output_sink(c,output_sink_context);serial_put(c=='\n'?'\r':c);if(c=='\n')serial_put('\n');return;}
     cursor_restore();
     characters++;
     if(c=='\n'){col=0;row++;serial_put('\r');serial_put('\n');}
@@ -203,6 +208,10 @@ int display_framebuffer_active(void){return framebuffer!=0;}
 int display_mode_supported(void){return framebuffer&&bochs_vbe_available();}
 unsigned display_pixel_width(void){return framebuffer?fb_width:720u;}
 unsigned display_pixel_height(void){return framebuffer?fb_height:400u;}
+uint32_t display_graphics_get_pixel(unsigned x,unsigned y){if(!framebuffer||x>=fb_width||y>=fb_height)return 0;volatile uint32_t*line=(volatile uint32_t*)(framebuffer+y*fb_pitch);return line[x];}
+void display_graphics_put_pixel(unsigned x,unsigned y,uint32_t value){if(!framebuffer||x>=fb_width||y>=fb_height)return;volatile uint32_t*line=(volatile uint32_t*)(framebuffer+y*fb_pitch);line[x]=value;}
+void display_graphics_fill(unsigned x,unsigned y,unsigned w,unsigned h,uint32_t value){if(!framebuffer||x>=fb_width||y>=fb_height)return;if(w>fb_width-x)w=fb_width-x;if(h>fb_height-y)h=fb_height-y;for(unsigned yy=0;yy<h;yy++){volatile uint32_t*line=(volatile uint32_t*)(framebuffer+(y+yy)*fb_pitch)+x;for(unsigned xx=0;xx<w;xx++)line[xx]=value;}}
+void display_graphics_text(unsigned x,unsigned y,const char*text,uint32_t foreground,uint32_t background,unsigned scale){if(!framebuffer||!text)return;if(!scale)scale=1;while(*text){uint8_t ch=(uint8_t)*text++;for(unsigned gy=0;gy<FONT_HEIGHT;gy++){uint8_t bits=glyph_row(ch,gy);for(unsigned gx=0;gx<FONT_WIDTH;gx++){uint32_t pixel=(bits&(0x80u>>gx))?foreground:background;display_graphics_fill(x+gx*scale,y+gy*scale,scale,scale,pixel);}}x+=FONT_WIDTH*scale;}}
 int display_set_mode(unsigned new_width,unsigned new_height){
     if(!framebuffer||new_width>1920||new_height>1200||!bochs_vbe_set_mode((uint16_t)new_width,(uint16_t)new_height,32))return 0;
     cursor_restore();fb_width=new_width;fb_height=new_height;fb_pitch=new_width*4u;

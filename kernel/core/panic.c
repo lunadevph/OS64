@@ -3,6 +3,7 @@
 #include "log.h"
 #include "vfs.h"
 #include "varfs.h"
+#include "pstore.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -146,10 +147,12 @@ static uint64_t rhash(const char *reason)
 }
 
 static char log_save_buf[6144];
+static size_t log_save_size;
 static const char log_hex[] = "0123456789ABCDEF";
 
 static void panic_log_save(uint64_t id)
 {
+    log_save_size = 0;
     size_t pos = 0;
     size_t i = 0;
     while (i < log_count() && pos + 100 < sizeof log_save_buf)
@@ -185,6 +188,7 @@ static void panic_log_save(uint64_t id)
     }
     if (pos + 1 < sizeof log_save_buf) log_save_buf[pos] = 0;
 
+    log_save_size = pos;
     if (pos == 0) return;
 
     char fname[64];
@@ -251,6 +255,7 @@ void kernel_panic(const char *reason)
     uint64_t panic_id = rhash(reason) ^ rsp ^ cr2 ^ rip;
 
     panic_log_save(panic_id);
+    (void)pstore_write_panic(reason, log_save_buf, log_save_size);
 
     display_color(ATTR);
     display_clear();

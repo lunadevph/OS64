@@ -14,9 +14,9 @@ CFLAGS := -std=gnu11 -ffreestanding -fno-stack-protector -fno-pic -fno-pie \
 	-Iinclude/os64 -I../sdk/include -I../third_party/bearssl/inc -I../third_party/bearssl/src
 CFLAGS += -include $(CONFIG_HEADER) -include $(PACKAGE_HEADER)
 LDFLAGS := -nostdlib -z noexecstack -z max-page-size=0x1000 -T arch/x86_64/linker.ld
-C_SOURCES := core/kernel.c core/bootopts.c core/elf.c core/panic.c core/service.c core/timed.c \
+C_SOURCES := core/kernel.c core/bootopts.c core/desktop.c core/compositor.c core/window_manager.c core/image_viewer.c core/tty.c core/elf.c core/panic.c core/pstore.c core/service.c core/timed.c \
 	arch/x86_64/interrupts/exceptions.c drivers/acpi/acpi.c drivers/disk/disk.c \
-	drivers/display/display.c drivers/display/ansi_terminal.c drivers/display/bochs_vbe.c drivers/display/graphics.c drivers/display/log.c drivers/keyboard/keyboard.c drivers/network/netdev.c drivers/network/pcnet.c drivers/network/rtl8139.c drivers/rtc/rtc.c \
+	drivers/display/display.c drivers/display/ansi_terminal.c drivers/display/bochs_vbe.c drivers/display/graphics.c drivers/display/log.c drivers/keyboard/ps2.c drivers/keyboard/keyboard.c drivers/network/netdev.c drivers/network/pcnet.c drivers/network/rtl8139.c drivers/rtc/rtc.c \
 	drivers/random/random.c \
 	drivers/pci/pci.c \
 	fs/fs.c fs/vfs.c fs/vfs_access.c fs/ext2.c fs/ext_variant.c fs/varfs.c fs/tmpfs.c fs/procfs.c net/net.c mm/memory.c security/auth.c security/crypto.c security/ofp.c \
