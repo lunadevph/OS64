@@ -129,6 +129,7 @@ make check-ext       # create and host-check ext2, ext3, and ext4 variants
 make run             # serial terminal, no graphical display
 make run-console     # QEMU nographic console
 make run-gui         # VGA/PS2 graphical VM
+make run-gui-native  # native QEMU window; no VNC or websockify
 make run-pcnet       # test the AMD PCnet adapter used by VirtualBox
 make run-installed   # boot an installed disk without the LiveCD
 make debug           # QEMU stopped with a GDB server on port 1234
@@ -255,6 +256,11 @@ the noVNC files under `/usr/share/novnc`. Open
 open the forwarded address instead. Stopping QEMU also stops the managed
 websockify process. The target reports a clear error if noVNC or websockify is
 not installed.
+
+For a local graphical session, run `make run-gui-native`. It opens OS64
+directly in QEMU's GTK window with native keyboard and mouse input and does not
+start VNC, noVNC, websockify, or a browser. Set `QEMU_NATIVE_DISPLAY=sdl` to use
+QEMU's SDL frontend instead.
 
 `pm` is OS64's small Internet package manager. It retrieves its catalog and
 base64-transported x86_64 ELF payloads from the project on

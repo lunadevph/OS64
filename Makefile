@@ -44,6 +44,7 @@ CPU              ?= max
 NETWORK_MODEL    ?= rtl8139
 
 QEMU             ?= qemu-system-x86_64
+QEMU_NATIVE_DISPLAY ?= gtk
 QEMU_COMMON      := -cpu $(CPU) \
                     -m $(MEMORY) \
                     -drive file=$(DISK),format=raw,if=ide \
@@ -414,6 +415,17 @@ run-gui: iso disk
 			-display none \
 			-vnc :0
 
+.PHONY: run-gui-native
+run-gui-native: iso disk
+	@printf "  %-7s %s\n" "QEMU" "native $(QEMU_NATIVE_DISPLAY) graphical window"
+	@printf "  %-7s %s\n" "INPUT" "PS/2 keyboard and mouse captured by the QEMU window"
+	$(Q)$(QEMU) \
+		$(QEMU_COMMON) \
+		-boot order=d \
+		-cdrom $(ISO) \
+		-serial stdio \
+		-display $(QEMU_NATIVE_DISPLAY)
+
 .PHONY: run-pcnet
 run-pcnet: iso disk
 	@printf "  %-7s %s\n" "QEMU" "AMD PCnet network"
@@ -491,6 +503,7 @@ help:
 	@printf "  run-console      Run using QEMU's nographic console\n"
 	@printf "  run-installed    Boot from the persistent disk\n"
 	@printf "  run-gui          Run VNC :0 with an automatic noVNC proxy\n"
+	@printf "  run-gui-native   Run in a native QEMU window without websockify\n"
 	@printf "  run-pcnet        Run using the AMD PCnet adapter\n"
 	@printf "  debug            Wait for a GDB connection on port 1234\n"
 	@printf "\n"
@@ -504,6 +517,7 @@ help:
 	@printf "  make -j$$(nproc)\n"
 	@printf "  make V=1\n"
 	@printf "  make run-gui MEMORY=256M\n"
+	@printf "  make run-gui-native QEMU_NATIVE_DISPLAY=sdl\n"
 	@printf "  make run NETWORK_MODEL=pcnet\n"
 
 # ---------------------------------------------------------------------------
